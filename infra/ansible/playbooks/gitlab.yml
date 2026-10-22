@@ -1,0 +1,12 @@
+---
+- name: GitLab sunucusu
+  hosts: cicd
+  become: true
+  roles:
+    - role: lab_cert
+      vars:
+        lab_cert_name: gitlab
+        lab_cert_sans:
+          - "DNS:{{ gitlab_hostname }}"
+          - "DNS:{{ registry_hostname }}"
+          - "DNS:{{ inventory_hostname }}.{{ lab_domain }}"

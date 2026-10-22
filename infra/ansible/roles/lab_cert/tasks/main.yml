@@ -1,0 +1,70 @@
+---
+- name: Kriptografi kütüphanesi
+  ansible.builtin.apt:
+    name: python3-cryptography
+    state: present
+
+- name: Sertifika klasörü
+  ansible.builtin.file:
+    path: "{{ lab_cert_dir }}"
+    state: directory
+    mode: "0755"
+
+# Özel anahtar bu sunucuda üretilir ve buradan hiç çıkmaz
+- name: "Özel anahtar ({{ lab_cert_name }})"
+  community.crypto.openssl_privatekey:
+    path: "{{ lab_cert_dir }}/{{ lab_cert_name }}.key"
+    type: ECC
+    curve: secp256r1
+    owner: "{{ lab_cert_owner }}"
+    group: "{{ lab_cert_group }}"
+    mode: "0600"
+
+- name: Mevcut sertifika geçerli mi?
+  community.crypto.x509_certificate_info:
+    path: "{{ lab_cert_dir }}/{{ lab_cert_name }}.crt"
+    valid_at:
+      renew: "{{ lab_cert_renew_before }}"
+  register: lab_cert_info
+  failed_when: false
+
+- name: Sertifika al ya da yenile
+  when: lab_cert_info.valid_at is not defined or not lab_cert_info.valid_at.renew
+  block:
+    - name: İmza isteği (CSR)
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ lab_cert_dir }}/{{ lab_cert_name }}.key"
+        common_name: "{{ lab_cert_sans[0] | regex_replace('^DNS:', '') }}"
+        subject_alt_name: "{{ lab_cert_sans }}"
+        key_usage: [digitalSignature]
+        key_usage_critical: true
+        extended_key_usage: [serverAuth]
+      register: lab_cert_csr
+
+    # Sadece CSR CA sunucusuna gider; CA anahtarı orada kalır
+    - name: CSR'ı Intermediate CA ile imzala (ss-infra)
+      community.crypto.x509_certificate_pipe:
+        csr_content: "{{ lab_cert_csr.csr }}"
+        provider: ownca
+        ownca_path: "{{ lab_ca_dir }}/intermediate-ca.crt"
+        ownca_privatekey_path: "{{ lab_ca_dir }}/intermediate-ca.key"
+        ownca_not_after: "+{{ lab_cert_days }}d"
+      delegate_to: "{{ lab_ca_host }}"
+      become: true
+      register: lab_cert_signed
+
+    - name: Intermediate sertifikasını oku (zincir için)
+      ansible.builtin.slurp:
+        src: "{{ lab_ca_dir }}/intermediate-ca.crt"
+      delegate_to: "{{ lab_ca_host }}"
+      become: true
+      register: lab_cert_intermediate
+
+    # Tam zincir: sunucu sertifikası + intermediate
+    - name: Sertifikayı yaz
+      ansible.builtin.copy:
+        content: "{{ lab_cert_signed.certificate }}{{ lab_cert_intermediate.content | b64decode }}"
+        dest: "{{ lab_cert_dir }}/{{ lab_cert_name }}.crt"
+        owner: "{{ lab_cert_owner }}"
+        group: "{{ lab_cert_group }}"
+        mode: "0644"

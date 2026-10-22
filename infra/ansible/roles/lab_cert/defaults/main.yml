@@ -1,0 +1,10 @@
+---
+# Kullanım: lab_cert_name ve lab_cert_sans verilir, gerisi varsayılan.
+lab_cert_dir: /etc/ssl/lab
+lab_cert_name: "{{ inventory_hostname }}"
+lab_cert_sans: []          # örn. ["DNS:gitlab.securestream.lab"]
+lab_cert_days: 365
+lab_cert_renew_before: "+30d"   # bitişe 30 günden az kaldıysa yenile
+lab_cert_owner: root
+lab_cert_group: root
+lab_ca_host: ss-infra
