@@ -50,3 +50,11 @@
 - HTTP->HTTPS yönlendirmesi iç porta (8443) gidiyordu; hedef :443 yapıldı.
 - Test uygulaması (whoami) non-root, read-only rootfs, drop ALL capabilities ile çalışıyor; curl -k olmadan HTTPS başarılı.
 - `.gitignore` içindeki `*.env` kuralı gizli olmayan versions.env'i de dışarıda bıraktı -> install.sh tekrarlanamaz oldu; versions.conf olarak düzeltildi.
+
+## Sprint 1 - GitLab hesaplari ve ilk push (2026-10-22)
+- root: admin isleri icin, e-posta onurcarkcioglu+root@gmail.com.
+- carkcioglu: gunluk hesap (Regular), securestream grubunda Owner.
+- Parolalar ekrana basilmadan aktarildi: read -rs + printf | ssh ... gitlab-rails runner (STDIN).
+- ss-mgmt anahtari carkcioglu hesabina Keys::CreateService ile eklendi (1 yil, auth+signing).
+- Ders: profil formundan e-posta degistirmek unconfirmed_email birakir; u.confirm onu onaylar.
+- BEKLEYEN: root parolasi 24+ karakter, root ve carkcioglu icin 2FA.
