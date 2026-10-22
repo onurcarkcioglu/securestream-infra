@@ -1,20 +1,58 @@
-# Sprint 1 duman testi: runner calisiyor mu, guvenli mi?
-# Sprint 2'de gercek pipeline ile degisecek.
+# securestream-infra pipeline
+# - secret-scan:    her push'ta bu commit'in tum gecmisi gitleaks ile taranir.
+# - publish-github: yalnizca main. Secret dosyalari (sifreli olsalar bile) TUM gecmisten cikarilir,
+#                   sonuc tekrar taranir ve ancak temizse GitHub'a gonderilir. Bkz. docs/adr/0008.
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH
+
+stages: [scan, publish]
+
+variables:
+  GITLEAKS_IMAGE: "ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f"
+  GITHUB_USER: "onurcarkcioglu"
+
 default:
   tags: [docker]
-  image: alpine:3.22
 
-runner-smoke:
-  stage: test
+secret-scan:
+  stage: scan
+  image:
+    name: $GITLEAKS_IMAGE
+    entrypoint: [""]
+  variables:
+    GIT_DEPTH: "0"
+    GIT_STRATEGY: clone
   script:
-    - echo "Runner - $CI_RUNNER_DESCRIPTION / is - $CI_JOB_ID"
-    - id
-    # Privileged kapali mi? Tam yetki (000001ffffffffff) OLMAMALI.
-    - grep CapEff /proc/self/status
-    # Lab DNS calisiyor mu?
-    - nslookup gitlab.securestream.lab
-    - apk add --no-cache curl
-    # 1) Lab CA ile TLS basarili olmali
-    - curl -fsS --cacert "$CI_SERVER_TLS_CA_FILE" -o /dev/null https://gitlab.securestream.lab/users/sign_in && echo "TLS tamam (lab CA ile)"
-    # 2) CA olmadan reddedilmeli: dogrulama gercekten yapiliyor mu?
-    - if curl -fsS -o /dev/null https://gitlab.securestream.lab/users/sign_in 2>/dev/null; then echo "HATA - CA'siz baglanti kabul edildi"; exit 1; else echo "Dogru - CA'siz baglanti reddedildi"; fi
+    - gitleaks git --log-opts="$CI_COMMIT_SHA" --redact .
+  # Ozel repoda sifreli Ansible Vault dosyalari var; asil kapi publish-github'daki temiz kopya taramasi.
+  allow_failure: true
+
+publish-github:
+  stage: publish
+  needs: []
+  image:
+    name: $GITLEAKS_IMAGE
+    entrypoint: [""]
+    docker:
+      user: root
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  resource_group: github-publish
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - |
+      set -eu
+      apk add --no-cache git-filter-repo >/dev/null
+      export GIT_SSL_CAINFO="$CI_SERVER_TLS_CA_FILE"
+      git clone -q --single-branch --branch "$CI_DEFAULT_BRANCH" \
+        "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" /tmp/pub
+      cd /tmp/pub
+      git filter-repo --force --invert-paths --path infra/ansible/secrets/ --path-glob '*vault.yml'
+      if git log --all --name-only --format= | grep -E '(^|/)secrets/|vault\.yml$|\.vault$'; then
+        echo "HATA: secret dosyasi gecmiste kaldi, yayinlanmadi"; exit 1
+      fi
+      gitleaks git --redact .
+      git push -q "https://${GITHUB_USER}:${GITHUB_MIRROR_TOKEN}@github.com/${GITHUB_USER}/securestream-infra.git" HEAD:refs/heads/main
+      echo "GitHub'a yayinlandi: $(git rev-parse --short HEAD) ($(git rev-list --count HEAD) commit)"
