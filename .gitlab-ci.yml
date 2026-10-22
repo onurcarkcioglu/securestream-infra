@@ -9,9 +9,12 @@ runner-smoke:
   script:
     - echo "Runner - $CI_RUNNER_DESCRIPTION / is - $CI_JOB_ID"
     - id
-    # Privileged kapali mi? CapEff degeri 0000003fffffffff gibi tam yetki OLMAMALI.
+    # Privileged kapali mi? Tam yetki (000001ffffffffff) OLMAMALI.
     - grep CapEff /proc/self/status
     # Lab DNS calisiyor mu?
     - nslookup gitlab.securestream.lab
-    # Lab CA ile GitLab'a TLS baglantisi
-    - wget -q --ca-certificate="$CI_SERVER_TLS_CA_FILE" -O /dev/null https://gitlab.securestream.lab/users/sign_in && echo "TLS tamam"
+    - apk add --no-cache curl
+    # 1) Lab CA ile TLS basarili olmali
+    - curl -fsS --cacert "$CI_SERVER_TLS_CA_FILE" -o /dev/null https://gitlab.securestream.lab/users/sign_in && echo "TLS tamam (lab CA ile)"
+    # 2) CA olmadan reddedilmeli: dogrulama gercekten yapiliyor mu?
+    - if curl -fsS -o /dev/null https://gitlab.securestream.lab/users/sign_in 2>/dev/null; then echo "HATA - CA'siz baglanti kabul edildi"; exit 1; else echo "Dogru - CA'siz baglanti reddedildi"; fi
