@@ -49,8 +49,8 @@ publish-github:
       git clone -q --single-branch --branch "$CI_DEFAULT_BRANCH" \
         "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" /tmp/pub
       cd /tmp/pub
-      git filter-repo --force --invert-paths --path infra/ansible/secrets/ --path-glob '*vault.yml'
-      if git log --all --name-only --format= | grep -E '(^|/)secrets/|vault\.yml$|\.vault$'; then
+      git filter-repo --force --invert-paths --path infra/ansible/secrets/ --path-glob 'infra/ansible/inventory/group_vars/*/vault.yml'
+      if git log --all --name-only --format= | grep -E '(^|/)secrets/|group_vars/[^/]+/vault\.yml$|\.vault$'; then
         echo "HATA: secret dosyasi gecmiste kaldi, yayinlanmadi"; exit 1
       fi
       gitleaks git --redact .

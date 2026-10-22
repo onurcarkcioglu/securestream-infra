@@ -10,7 +10,7 @@ unlimited time to attack the password.
 ## Decision
 - `catalog-api` (no secrets) is a GitLab push mirror of the protected `main` branch only.
 - `securestream-infra` is published by a pipeline job that rewrites history with `git filter-repo` to
-  remove `infra/ansible/secrets/` and every `vault.yml`, runs gitleaks on the result, and only then pushes.
+  remove `infra/ansible/secrets/` and every `inventory/group_vars/*/vault.yml`, runs gitleaks on the result, and only then pushes.
 - The mirror credential is a fine-grained GitHub token: two repositories, contents only, 90-day expiry.
 
 ## Consequences
