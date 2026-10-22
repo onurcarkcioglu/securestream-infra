@@ -2,7 +2,7 @@ locals {
   # Tek doğruluk kaynağı (single source of truth): tüm lab sunucuları burada.
   # memory MB, disk GB. role hem Proxmox etiketi hem Ansible grubu olur.
   vms = {
-    "ss-infra"  = { vm_id = 101, ip = "10.10.10.5", cores = 1, memory = 1024, disk = 10, role = "infra" }
+    "ss-infra"  = { vm_id = 101, ip = "10.10.10.5", cores = 2, memory = 3072, disk = 10, role = "infra" }
     "ss-gitlab" = { vm_id = 110, ip = "10.10.10.10", cores = 8, memory = 16384, disk = 100, role = "cicd" }
     "ss-runner" = { vm_id = 111, ip = "10.10.10.11", cores = 8, memory = 12288, disk = 100, role = "runner" }
     "ss-sec"    = { vm_id = 112, ip = "10.10.10.12", cores = 8, memory = 16384, disk = 120, role = "security" }
