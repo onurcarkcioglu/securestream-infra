@@ -1,0 +1,19 @@
+---
+# Split DNS: sadece .securestream.lab sorguları ss-infra'ya gider.
+# ss-infra çökse bile internet isimleri çözülmeye devam eder.
+- name: systemd-resolved ek ayar klasörü
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    mode: "0755"
+
+- name: Lab alan adını ss-infra'ya yönlendir
+  ansible.builtin.copy:
+    dest: /etc/systemd/resolved.conf.d/securestream.conf
+    content: |
+      # Ansible tarafından yönetilir (roles/dns_client)
+      [Resolve]
+      DNS={{ lab_dns_server }}
+      Domains=~{{ lab_domain }}
+    mode: "0644"
+  notify: resolved yeniden başlat

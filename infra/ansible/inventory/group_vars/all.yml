@@ -1,0 +1,18 @@
+---
+lab_domain: securestream.lab
+lab_dns_server: 10.10.10.5
+lab_ingress_ip: 10.10.10.100
+lab_upstream_dns:
+  - 1.1.1.1
+  - 9.9.9.9
+
+# Servis isimleri -> IP (sunucu isimleri envanterden otomatik eklenir)
+lab_service_records:
+  gitlab: 10.10.10.10
+  registry: 10.10.10.10
+  sonar: 10.10.10.12
+  dojo: 10.10.10.12
+  dtrack: 10.10.10.12
+  vault: 10.10.10.13
+
+lab_ca_dir: /etc/ssl/securestream-ca

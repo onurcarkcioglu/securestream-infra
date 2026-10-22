@@ -1,0 +1,7 @@
+---
+- name: Lab Root CA'yı güvenilir sertifikalara ekle
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../files/securestream-root-ca.crt"
+    dest: /usr/local/share/ca-certificates/securestream-root-ca.crt
+    mode: "0644"
+  notify: Sertifika deposunu güncelle

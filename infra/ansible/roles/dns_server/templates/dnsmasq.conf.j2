@@ -1,0 +1,28 @@
+# Ansible tarafından yönetilir (roles/dns_server). Elle düzenleme.
+domain-needed
+bogus-priv
+no-resolv
+{% for s in lab_upstream_dns %}
+server={{ s }}
+{% endfor %}
+
+# Sadece lab ağında dinle; systemd-resolved (127.0.0.53) ile çakışmaz
+bind-interfaces
+listen-address={{ lab_dns_server }}
+
+# Bu alan adı dışarıya sorulmaz, burada cevaplanır
+local=/{{ lab_domain }}/
+domain={{ lab_domain }}
+
+# Sunucular (envanterden otomatik)
+{% for h in groups['all'] | sort %}
+host-record={{ h }}.{{ lab_domain }},{{ hostvars[h].ansible_host }}
+{% endfor %}
+
+# Servisler
+{% for name, ip in lab_service_records.items() %}
+host-record={{ name }}.{{ lab_domain }},{{ ip }}
+{% endfor %}
+
+# Kubernetes uygulamaları: *.apps.securestream.lab -> ingress
+address=/apps.{{ lab_domain }}/{{ lab_ingress_ip }}

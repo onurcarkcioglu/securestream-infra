@@ -1,0 +1,5 @@
+---
+- name: resolved yeniden başlat
+  ansible.builtin.service:
+    name: systemd-resolved
+    state: restarted

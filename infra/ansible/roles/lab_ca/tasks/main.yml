@@ -1,0 +1,98 @@
+---
+- name: Kriptografi kütüphanesi
+  ansible.builtin.apt:
+    name: python3-cryptography
+    state: present
+
+- name: CA klasörü (sadece root erişebilir)
+  ansible.builtin.file:
+    path: "{{ lab_ca_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Root CA var mı?
+  ansible.builtin.stat:
+    path: "{{ lab_ca_dir }}/root-ca.crt"
+  register: root_ca_cert
+
+- name: Root CA oluştur (sadece ilk seferde)
+  when: not root_ca_cert.stat.exists
+  block:
+    - name: Root CA özel anahtarı
+      community.crypto.openssl_privatekey:
+        path: "{{ lab_ca_dir }}/root-ca.key"
+        type: ECC
+        curve: secp384r1
+        mode: "0400"
+
+    - name: Root CA isteği
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ lab_ca_dir }}/root-ca.key"
+        common_name: SecureStream Lab Root CA
+        organization_name: SecureStream Lab
+        use_common_name_for_san: false
+        basic_constraints: ["CA:TRUE", "pathlen:1"]
+        basic_constraints_critical: true
+        key_usage: [keyCertSign, cRLSign]
+        key_usage_critical: true
+        name_constraints_permitted:
+          - "DNS:{{ lab_domain }}"
+          - "IP:10.10.10.0/255.255.255.0"
+        name_constraints_critical: true
+      register: root_ca_csr
+
+    - name: Root CA sertifikası (kendinden imzalı)
+      community.crypto.x509_certificate:
+        path: "{{ lab_ca_dir }}/root-ca.crt"
+        csr_content: "{{ root_ca_csr.csr }}"
+        privatekey_path: "{{ lab_ca_dir }}/root-ca.key"
+        provider: selfsigned
+        selfsigned_not_after: "+3650d"
+        mode: "0644"
+
+- name: Intermediate CA var mı?
+  ansible.builtin.stat:
+    path: "{{ lab_ca_dir }}/intermediate-ca.crt"
+  register: int_ca_cert
+
+- name: Intermediate CA oluştur (sadece ilk seferde)
+  when: not int_ca_cert.stat.exists
+  block:
+    - name: Intermediate CA özel anahtarı
+      community.crypto.openssl_privatekey:
+        path: "{{ lab_ca_dir }}/intermediate-ca.key"
+        type: ECC
+        curve: secp384r1
+        mode: "0400"
+
+    - name: Intermediate CA isteği
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ lab_ca_dir }}/intermediate-ca.key"
+        common_name: SecureStream Lab Intermediate CA
+        organization_name: SecureStream Lab
+        use_common_name_for_san: false
+        basic_constraints: ["CA:TRUE", "pathlen:0"]
+        basic_constraints_critical: true
+        key_usage: [keyCertSign, cRLSign]
+        key_usage_critical: true
+      register: int_ca_csr
+
+    - name: Intermediate CA sertifikası (Root imzalı)
+      community.crypto.x509_certificate:
+        path: "{{ lab_ca_dir }}/intermediate-ca.crt"
+        csr_content: "{{ int_ca_csr.csr }}"
+        provider: ownca
+        ownca_path: "{{ lab_ca_dir }}/root-ca.crt"
+        ownca_privatekey_path: "{{ lab_ca_dir }}/root-ca.key"
+        ownca_not_after: "+730d"
+        mode: "0644"
+
+# Açık sertifika gizli değildir, repoya girebilir.
+# Özel anahtarlar (.key) ss-infra'dan asla çıkmaz.
+- name: Root CA sertifikasını ss-mgmt'ye al
+  ansible.builtin.fetch:
+    src: "{{ lab_ca_dir }}/root-ca.crt"
+    dest: "{{ playbook_dir }}/../files/securestream-root-ca.crt"
+    flat: true

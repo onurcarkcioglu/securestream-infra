@@ -1,0 +1,14 @@
+---
+- name: Lab CA ve DNS sunucusu
+  hosts: infra
+  become: true
+  roles:
+    - lab_ca
+    - dns_server
+
+- name: Tüm sunucular - DNS istemcisi ve CA güveni
+  hosts: all
+  become: true
+  roles:
+    - dns_client
+    - ca_trust

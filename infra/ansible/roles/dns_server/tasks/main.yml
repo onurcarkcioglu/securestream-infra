@@ -1,0 +1,30 @@
+---
+# Ayar dosyası paketten ÖNCE yazılır: dnsmasq kurulur kurulmaz doğru
+# adreste dinlesin, 53 numaralı portta çakışma yaşanmasın.
+- name: dnsmasq ayar klasörü
+  ansible.builtin.file:
+    path: /etc/dnsmasq.d
+    state: directory
+    mode: "0755"
+
+- name: dnsmasq ayarı
+  ansible.builtin.template:
+    src: dnsmasq.conf.j2
+    dest: /etc/dnsmasq.d/securestream.conf
+    mode: "0644"
+  notify: dnsmasq yeniden başlat
+
+- name: dnsmasq kur
+  ansible.builtin.apt:
+    name: dnsmasq
+    state: present
+
+- name: Ayar sözdizimini doğrula
+  ansible.builtin.command: dnsmasq --test --conf-dir=/etc/dnsmasq.d
+  changed_when: false
+
+- name: dnsmasq çalışsın
+  ansible.builtin.service:
+    name: dnsmasq
+    enabled: true
+    state: started
