@@ -34,3 +34,5 @@
 - Güvenli dağıtım: önce --check --diff, sonra tek sunucu, sonra hepsi. SSH handler'ı önce `sshd -t` ile doğruluyor.
 - İdempotency doğrulandı: ikinci çalıştırmada 8/8 sunucuda changed=0.
 
+- Proxmox ss-infra için %100 bellek gösterdi; gerçek kullanım %35'ti. Sebep: balloon sürücüsü kapalıydı, Proxmox VM içini göremiyordu. Tüm VM'lerde floating=dedicated yapıldı (ölçüm açık, bellek geri alınmıyor).
+- Boyut değişikliği Proxmox arayüzünden değil Terraform'dan yapıldı (drift olmasın). İlk denemede sed eşleşme bulamadı ve sessizce geçti; grep ile doğrulama sayesinde fark edildi.
