@@ -1,0 +1,4 @@
+---
+baseline_timezone: Europe/Istanbul
+baseline_ssh_allow_users:
+  - ubuntu

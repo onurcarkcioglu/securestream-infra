@@ -1,0 +1,50 @@
+---
+- name: Paket listesini güncelle ve sistemi yükselt
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    upgrade: dist
+
+- name: Temel paketleri kur
+  ansible.builtin.apt:
+    name:
+      - chrony
+      - unattended-upgrades
+      - auditd
+      - ca-certificates
+      - curl
+      - jq
+    state: present
+
+- name: Saat dilimini ayarla
+  community.general.timezone:
+    name: "{{ baseline_timezone }}"
+
+- name: Zaman senkronizasyonu (chrony) çalışsın
+  ansible.builtin.service:
+    name: chrony
+    enabled: true
+    state: started
+
+- name: Otomatik güvenlik güncellemelerini aç
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    mode: "0644"
+
+- name: Denetim kaydı (auditd) çalışsın
+  ansible.builtin.service:
+    name: auditd
+    enabled: true
+    state: started
+
+- name: SSH sertleştirme ayarlarını yaz
+  ansible.builtin.template:
+    src: sshd-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-securestream.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: SSH ayarını doğrula ve yeniden başlat

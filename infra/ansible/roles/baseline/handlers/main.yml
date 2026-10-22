@@ -1,0 +1,5 @@
+---
+# Önce yapılandırmayı test et (sshd -t). Hata varsa yeniden başlatma;
+# bozuk bir ayarla SSH'ı başlatmak sunucudan kilitlenmek demektir.
+- name: SSH ayarını doğrula ve yeniden başlat
+  ansible.builtin.shell: sshd -t && systemctl restart ssh

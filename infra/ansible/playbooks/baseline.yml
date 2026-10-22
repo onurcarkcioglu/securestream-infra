@@ -1,0 +1,6 @@
+---
+- name: Tüm sunuculara temel sertleştirme uygula
+  hosts: all
+  become: true
+  roles:
+    - baseline

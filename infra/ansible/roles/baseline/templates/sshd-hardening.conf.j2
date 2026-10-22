@@ -1,0 +1,16 @@
+# Ansible tarafından yönetilir (roles/baseline). Elle düzenleme.
+# Dosya adı "10-" ile başlıyor: sshd'de bir ayarın İLK geçen değeri geçerlidir,
+# bu dosya cloud-image ayarlarından (60-...) önce okunur.
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+AuthenticationMethods publickey
+MaxAuthTries 3
+LoginGraceTime 30
+X11Forwarding no
+AllowAgentForwarding no
+AllowTcpForwarding no
+ClientAliveInterval 300
+ClientAliveCountMax 2
+AllowUsers {{ baseline_ssh_allow_users | join(' ') }}
