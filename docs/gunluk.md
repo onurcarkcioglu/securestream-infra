@@ -86,3 +86,13 @@
   Sonuc: WARN 0, PASS 117 -> 120, pipeline 10/10 yesil.
 - Falco (chart 9.2.1, modern eBPF): container plugin k3s soketini buldu.
 - Ders: kubectl exec -t, -i olmadan TTY acmaz; "Terminal shell in container" kurali bu yuzden tetiklenmedi. -it ile alarm geldi.
+
+## Gun 3 - HashiCorp Vault + External Secrets (2026-10-22)
+- Vault 2.1.2 (ss-vault): TLS (lab CA), Raft, file audit, kv-v2. Init 5/3 Shamir; cikti ekrana basilmadan ansible-vault ile sifrelendi.
+- scripts/vault-unseal.sh: 3 anahtar bellekte cozulur, API'ye stdin ile gider.
+- Kubernetes auth: token reviewer SA (system:auth-delegator); rol catalog -> SA catalog-eso, ns catalog, audience vault, policy catalog-read (yalnizca okuma).
+- External Secrets Operator 2.11.0: SecretStore (Vault CA ile) + ExternalSecret -> catalog-config Secret.
+- Uygulama: /v1/admin/stats anahtarla korunuyor; anahtarsiz 401, anahtarla 200.
+- Kurulum bitince root token iptal edildi; gerekirse unseal anahtarlariyla 'vault operator generate-root'.
+- Ders: yanlislikla eski terminal kaydi yapistirildi; istenmeyen commit git revert ile geri alindi (force push yok).
+- Ders: GitHub token sohbete yazildi -> hemen silindi ve yenilendi; token girisi artik bicim kontrollu (github_pat_ + uzunluk).
