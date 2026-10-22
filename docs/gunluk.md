@@ -68,3 +68,13 @@
 - Duman testi (pipeline #3 success): CapEff kisitli, lab DNS, CA ile TLS tamam, CA'siz TLS reddedildi.
 - Ders: Alpine wget = BusyBox, --ca-certificate yok; curl --cacert kullan.
 - Ders: --check modunda kurulmamis paket icin dpkg_selections patlar -> when: not ansible_check_mode.
+
+## Sprint 2 - catalog-api guvenli pipeline, asama 1 (2026-10-22)
+- catalog-api: FastAPI, 8 test, /docs kapali, girdi dogrulama testi, ruff (bandit S kurallari).
+- Pipeline: lint, test, gitleaks, semgrep, trivy fs, kaniko build, trivy image + CycloneDX SBOM. Ilk calisma 7/7 yesil.
+- Tum arac imajlari digest ile sabit (scripts/pin-images.sh). Neden: CVE-2026-33634 Trivy tedarik zinciri saldirisi (Mart 2026).
+- Kaniko: Google arsivledi -> bakimi suren fork martizih/kaniko. Privileged gerekmez.
+- Surum secimi: yeni surumlerde ~2 hafta bekleme (semgrep 1.180.0).
+- Kapi testi (demo dali): gitleaks gitlab-pat (REDACTED), semgrep 1 blocking, trivy CVE-2018-18074 -> hepsi kirmizi.
+- Ders: requests 2.19.1 idna cakismasi lint ve test'i pip install asamasinda dusurdu; lint guvenlik kontrolu korlesti.
+  Duzeltme: lint yalnizca sabit ruff kurar. Tekrar testte ruff S602'yi kendi basina yakaladi.
