@@ -1,0 +1,9 @@
+# Lab Intermediate CA ile sertifika imzalayan, tüm namespace'lerin kullanabileceği issuer.
+# Secret cert-manager namespace'inde durur; Sprint 5'te Vault PKI'a geçilecek.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: securestream-lab-ca
+spec:
+  ca:
+    secretName: securestream-intermediate-ca

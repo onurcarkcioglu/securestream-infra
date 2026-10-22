@@ -1,0 +1,20 @@
+# Traefik, MetalLB'den sabit IP alır: *.apps.securestream.lab -> 10.10.10.100
+service:
+  type: LoadBalancer
+  annotations:
+    metallb.io/loadBalancerIPs: 10.10.10.100
+
+# HTTP isteklerini HTTPS'e yönlendir
+additionalArguments:
+  - "--entryPoints.web.http.redirections.entryPoint.to=:443"
+  - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+
+# Yönetim paneli dışarıya açılmaz
+ingressRoute:
+  dashboard:
+    enabled: false
+
+# Standart Kubernetes Ingress kaynaklarını işle
+providers:
+  kubernetesIngress:
+    enabled: true

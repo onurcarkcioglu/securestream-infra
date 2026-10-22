@@ -1,0 +1,3 @@
+# CRD'ler chart ile birlikte kurulur ve güncellenir
+crds:
+  enabled: true
