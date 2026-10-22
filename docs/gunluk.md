@@ -43,3 +43,10 @@
 - Cluster token'ı Ansible Vault ile şifreli; vault parolası repo dışında. Token üretilirken ekrana basılmadı.
 - Hatalar: Vault parolası bir kez ekrana basıldı → kullanılmadan yenilendi. Token'a satır sonu karıştı (uzunluk 65) → `tr -d '\n'` ile düzeltildi. Yanlış klasörde çalışan komutlar → her bloğa `cd` eklendi.
 - İdempotency: ikinci çalıştırmada 3/3 node changed=0.
+
+### Platform: MetalLB, Traefik, cert-manager
+- ingress-nginx Mart 2026'da emekliye ayrıldı (güvenlik yaması yok). Kurmadan önce fark edildi, yerine Helm ile sabit sürümlü Traefik kuruldu.
+- MetalLB L2: Traefik 10.10.10.100 aldı. cert-manager, Lab Intermediate CA ile ClusterIssuer; CA anahtarı ss-mgmt diskine yazılmadan (process substitution) secret olarak yüklendi; k3s secrets-encryption ile diskte şifreli.
+- HTTP->HTTPS yönlendirmesi iç porta (8443) gidiyordu; hedef :443 yapıldı.
+- Test uygulaması (whoami) non-root, read-only rootfs, drop ALL capabilities ile çalışıyor; curl -k olmadan HTTPS başarılı.
+- `.gitignore` içindeki `*.env` kuralı gizli olmayan versions.env'i de dışarıda bıraktı -> install.sh tekrarlanamaz oldu; versions.conf olarak düzeltildi.
