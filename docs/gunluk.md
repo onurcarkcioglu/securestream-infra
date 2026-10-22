@@ -78,3 +78,11 @@
 - Kapi testi (demo dali): gitleaks gitlab-pat (REDACTED), semgrep 1 blocking, trivy CVE-2018-18074 -> hepsi kirmizi.
 - Ders: requests 2.19.1 idna cakismasi lint ve test'i pip install asamasinda dusurdu; lint guvenlik kontrolu korlesti.
   Duzeltme: lint yalnizca sabit ruff kurar. Tekrar testte ruff S602'yi kendi basina yakaladi.
+
+## Gun 2 - DAST ve runtime (2026-10-22)
+- catalog.securestream.lab DNS kaydi (ingress 10.10.10.100).
+- DAST: OWASP ZAP API taramasi deploy sonrasi; zap-rules.tsv'deki XSS/SQLi/komut enjeksiyonu kurallari FAIL, digerleri WARN (allow_failure exit 2).
+- Ilk tarama: 3 WARN (X-Content-Type-Options, HSTS, CORP). Duzeltme: guvenlik basliklari middleware + test + uvicorn --no-server-header.
+  Sonuc: WARN 0, PASS 117 -> 120, pipeline 10/10 yesil.
+- Falco (chart 9.2.1, modern eBPF): container plugin k3s soketini buldu.
+- Ders: kubectl exec -t, -i olmadan TTY acmaz; "Terminal shell in container" kurali bu yuzden tetiklenmedi. -it ile alarm geldi.
