@@ -9,6 +9,7 @@ lab_upstream_dns:
 # Servis isimleri -> IP (sunucu isimleri envanterden otomatik eklenir)
 lab_service_records:
   gitlab: 10.10.10.10
+  catalog: 10.10.10.100
   registry: 10.10.10.10
   sonar: 10.10.10.12
   dojo: 10.10.10.12
