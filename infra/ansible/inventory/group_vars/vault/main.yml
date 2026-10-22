@@ -1,0 +1,3 @@
+---
+vault_version: "2.1.2-1"    # 2.2.0 yeni; ~2 hafta bekleme kurali
+vault_hostname: "vault.{{ lab_domain }}"

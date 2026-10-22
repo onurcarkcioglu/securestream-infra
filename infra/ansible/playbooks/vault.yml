@@ -1,0 +1,25 @@
+---
+- name: HashiCorp Vault
+  hosts: vault
+  become: true
+  tasks:
+    - name: Vault paketi (vault kullanicisini da olusturur)
+      ansible.builtin.import_role:
+        name: vault
+        tasks_from: install.yml
+
+    - name: Vault TLS sertifikasi (lab CA; anahtar sunucudan cikmaz)
+      ansible.builtin.import_role:
+        name: lab_cert
+      vars:
+        lab_cert_name: vault
+        lab_cert_sans:
+          - "DNS:{{ vault_hostname }}"
+          - "DNS:{{ inventory_hostname }}.{{ lab_domain }}"
+        lab_cert_owner: vault
+        lab_cert_group: vault
+
+    - name: Vault yapilandirmasi
+      ansible.builtin.import_role:
+        name: vault
+        tasks_from: config.yml

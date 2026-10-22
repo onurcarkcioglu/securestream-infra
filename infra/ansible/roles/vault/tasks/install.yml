@@ -1,0 +1,28 @@
+---
+- name: deb822_repository icin python3-debian
+  ansible.builtin.apt:
+    name: python3-debian
+    state: present
+    update_cache: true
+
+- name: HashiCorp apt deposu (imza anahtariyla)
+  ansible.builtin.deb822_repository:
+    name: hashicorp
+    types: [deb]
+    uris: https://apt.releases.hashicorp.com
+    suites: ["{{ ansible_facts['distribution_release'] }}"]
+    components: [main]
+    signed_by: https://apt.releases.hashicorp.com/gpg
+    state: present
+
+- name: Vault sabit surumle kurulu
+  ansible.builtin.apt:
+    name: "vault={{ vault_version }}"
+    state: present
+    update_cache: true
+
+- name: Vault surumu kilitli
+  ansible.builtin.dpkg_selections:
+    name: vault
+    selection: hold
+  when: not ansible_check_mode

@@ -1,0 +1,19 @@
+# {{ ansible_managed }}
+ui            = true
+disable_mlock = true   # Raft depolamada onerilen ayar
+cluster_name  = "securestream"
+
+storage "raft" {
+  path    = "/opt/vault/data"
+  node_id = "{{ inventory_hostname }}"
+}
+
+listener "tcp" {
+  address         = "0.0.0.0:8200"
+  tls_cert_file   = "/etc/ssl/lab/vault.crt"
+  tls_key_file    = "/etc/ssl/lab/vault.key"
+  tls_min_version = "tls12"
+}
+
+api_addr     = "https://{{ vault_hostname }}:8200"
+cluster_addr = "https://{{ vault_hostname }}:8201"

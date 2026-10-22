@@ -1,0 +1,41 @@
+---
+- name: Veri ve audit klasorleri
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: vault
+    group: vault
+    mode: "0750"
+  loop: [/opt/vault/data, /var/log/vault]
+
+- name: vault.hcl
+  ansible.builtin.template:
+    src: vault.hcl.j2
+    dest: /etc/vault.d/vault.hcl
+    owner: root
+    group: vault
+    mode: "0640"
+  notify: restart vault
+
+- name: Vault servisi acik
+  ansible.builtin.systemd:
+    name: vault
+    enabled: true
+    state: started
+
+- name: Handler'lari simdi calistir
+  ansible.builtin.meta: flush_handlers
+
+- name: Vault API cevap veriyor (init/seal durumundan bagimsiz)
+  ansible.builtin.uri:
+    url: "https://{{ vault_hostname }}:8200/v1/sys/health"
+    ca_path: /usr/local/share/ca-certificates/securestream-root-ca.crt
+    status_code: [200, 429, 472, 473, 501, 503]
+  register: vault_health
+  retries: 10
+  delay: 3
+  until: vault_health.status in [200, 429, 472, 473, 501, 503]
+
+- name: Durum
+  ansible.builtin.debug:
+    msg: "initialized={{ vault_health.json.initialized }} sealed={{ vault_health.json.sealed }}"
