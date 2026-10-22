@@ -1,0 +1,20 @@
+---
+- name: Kurulu k3s sürümü
+  ansible.builtin.command: /usr/local/bin/k3s --version
+  register: k3s_installed
+  changed_when: false
+  failed_when: false
+
+- name: k3s kurulum betiğini indir
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /usr/local/bin/k3s-install.sh
+    mode: "0700"
+  when: k3s_version not in (k3s_installed.stdout | default(''))
+
+# Sadece sürüm farklıysa ya da kurulu değilse çalışır
+- name: "k3s kur ({{ k3s_install_role }})"
+  ansible.builtin.command: "/usr/local/bin/k3s-install.sh {{ k3s_install_role }}"
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+  when: k3s_version not in (k3s_installed.stdout | default(''))

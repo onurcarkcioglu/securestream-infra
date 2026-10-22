@@ -36,3 +36,10 @@
 
 - Proxmox ss-infra için %100 bellek gösterdi; gerçek kullanım %35'ti. Sebep: balloon sürücüsü kapalıydı, Proxmox VM içini göremiyordu. Tüm VM'lerde floating=dedicated yapıldı (ölçüm açık, bellek geri alınmıyor).
 - Boyut değişikliği Proxmox arayüzünden değil Terraform'dan yapıldı (drift olmasın). İlk denemede sed eşleşme bulamadı ve sessizce geçti; grep ile doğrulama sayesinde fark edildi.
+
+### k3s cluster
+- k3s v1.36.5+k3s1 (stable kanal, sabit sürüm), 1 control plane + 2 worker, Ansible rolüyle.
+- Güvenlik: secrets-encryption, protect-kernel-defaults (CIS), API audit log (secret'lar Metadata seviyesinde, değer loglanmıyor), Traefik/ServiceLB kapalı.
+- Cluster token'ı Ansible Vault ile şifreli; vault parolası repo dışında. Token üretilirken ekrana basılmadı.
+- Hatalar: Vault parolası bir kez ekrana basıldı → kullanılmadan yenilendi. Token'a satır sonu karıştı (uzunluk 65) → `tr -d '\n'` ile düzeltildi. Yanlış klasörde çalışan komutlar → her bloğa `cd` eklendi.
+- İdempotency: ikinci çalıştırmada 3/3 node changed=0.

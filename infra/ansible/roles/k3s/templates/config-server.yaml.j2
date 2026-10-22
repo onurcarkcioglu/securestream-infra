@@ -1,0 +1,22 @@
+# Ansible tarafından yönetilir (roles/k3s). Elle düzenleme.
+token: "{{ k3s_token }}"
+node-ip: "{{ ansible_host }}"
+write-kubeconfig-mode: "0600"
+tls-san:
+  - "{{ inventory_hostname }}.{{ lab_domain }}"
+  - "{{ ansible_host }}"
+# Yerlerine Ingress-NGINX ve MetalLB kurulacak
+disable:
+  - traefik
+  - servicelb
+# Secret'lar diskte şifreli saklanır
+secrets-encryption: true
+# CIS: kubelet güvensiz kernel ayarlarıyla çalışmaz
+protect-kernel-defaults: true
+# API denetim kaydı
+kube-apiserver-arg:
+  - "audit-policy-file=/etc/rancher/k3s/audit-policy.yaml"
+  - "audit-log-path=/var/lib/rancher/k3s/server/logs/audit.log"
+  - "audit-log-maxage=30"
+  - "audit-log-maxbackup=10"
+  - "audit-log-maxsize=100"

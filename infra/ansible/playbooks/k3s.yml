@@ -1,0 +1,13 @@
+---
+# Önce control plane, sonra worker'lar
+- name: k3s control plane
+  hosts: k3s_server
+  become: true
+  roles:
+    - k3s
+
+- name: k3s worker'lar
+  hosts: k3s_agent
+  become: true
+  roles:
+    - k3s

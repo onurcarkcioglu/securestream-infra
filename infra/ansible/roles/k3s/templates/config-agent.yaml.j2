@@ -1,0 +1,5 @@
+# Ansible tarafından yönetilir (roles/k3s). Elle düzenleme.
+server: "{{ k3s_server_url }}"
+token: "{{ k3s_token }}"
+node-ip: "{{ ansible_host }}"
+protect-kernel-defaults: true

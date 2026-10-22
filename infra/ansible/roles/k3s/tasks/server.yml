@@ -1,0 +1,73 @@
+---
+- name: Audit log klasörü
+  ansible.builtin.file:
+    path: /var/lib/rancher/k3s/server/logs
+    state: directory
+    mode: "0700"
+
+# Secret'lar Metadata seviyesinde: kim eriştiği kaydedilir, değeri ASLA loglanmaz.
+- name: API audit politikası
+  ansible.builtin.copy:
+    dest: /etc/rancher/k3s/audit-policy.yaml
+    mode: "0600"
+    content: |
+      apiVersion: audit.k8s.io/v1
+      kind: Policy
+      omitStages: ["RequestReceived"]
+      rules:
+        - level: None
+          nonResourceURLs: ["/healthz*", "/readyz*", "/livez*", "/version"]
+        - level: Metadata
+          resources:
+            - group: ""
+              resources: ["secrets", "configmaps"]
+        - level: Metadata
+  notify: k3s yeniden başlat
+
+- name: Control plane ayarı
+  ansible.builtin.template:
+    src: config-server.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: "0600"
+  no_log: true
+  notify: k3s yeniden başlat
+
+- name: k3s server kur
+  ansible.builtin.include_tasks: install.yml
+  vars:
+    k3s_install_role: server
+
+- name: k3s servisi çalışsın
+  ansible.builtin.service:
+    name: k3s
+    enabled: true
+    state: started
+
+- name: API sunucusu hazır olsun
+  ansible.builtin.wait_for:
+    port: 6443
+    timeout: 300
+
+- name: ss-mgmt'de .kube klasörü
+  ansible.builtin.file:
+    path: "{{ lookup('env', 'HOME') }}/.kube"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+  become: false
+
+- name: kubeconfig'i oku
+  ansible.builtin.slurp:
+    src: /etc/rancher/k3s/k3s.yaml
+  register: k3s_kubeconfig
+  no_log: true
+
+# 127.0.0.1 adresi isimle değiştirilir; sertifikada (tls-san) bu isim var.
+- name: kubeconfig'i ss-mgmt'ye yaz
+  ansible.builtin.copy:
+    content: "{{ k3s_kubeconfig.content | b64decode | replace('https://127.0.0.1:6443', 'https://' ~ inventory_hostname ~ '.' ~ lab_domain ~ ':6443') }}"
+    dest: "{{ lookup('env', 'HOME') }}/.kube/config"
+    mode: "0600"
+  delegate_to: localhost
+  become: false
+  no_log: true

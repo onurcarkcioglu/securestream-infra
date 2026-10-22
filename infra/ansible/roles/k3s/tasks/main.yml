@@ -1,0 +1,22 @@
+---
+- name: Kubelet için kernel ayarları
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/90-kubelet.conf
+    reload: true
+  loop: "{{ k3s_kernel_params | dict2items }}"
+
+- name: k3s ayar klasörü
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: "0755"
+
+- name: Control plane görevleri
+  ansible.builtin.include_tasks: server.yml
+  when: inventory_hostname in groups['k3s_server']
+
+- name: Worker görevleri
+  ansible.builtin.include_tasks: agent.yml
+  when: inventory_hostname in groups['k3s_agent']

@@ -1,0 +1,7 @@
+---
+# protect-kernel-defaults açıkken kubelet bu değerleri bekler; yoksa başlamaz.
+k3s_kernel_params:
+  vm.panic_on_oom: 0
+  vm.overcommit_memory: 1
+  kernel.panic: 10
+  kernel.panic_on_oops: 1
