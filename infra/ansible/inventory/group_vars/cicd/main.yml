@@ -1,3 +1,9 @@
 ---
+gitlab_version: "19.5.1-ce.0"
 gitlab_hostname: "gitlab.{{ lab_domain }}"
 registry_hostname: "registry.{{ lab_domain }}"
+
+# git@gitlab... ile SSH için 'git' kullanıcısına izin (sadece bu sunucuda)
+baseline_ssh_allow_users:
+  - ubuntu
+  - git

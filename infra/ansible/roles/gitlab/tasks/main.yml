@@ -1,0 +1,67 @@
+---
+# Resmi GitLab deposu. Anahtar SADECE bu depo için geçerli (signed-by).
+- name: Apt anahtar klasörü
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: GitLab paket imza anahtarı
+  ansible.builtin.get_url:
+    url: https://packages.gitlab.com/gitlab/gitlab-ce/gpgkey
+    dest: /etc/apt/keyrings/gitlab-ce.asc
+    mode: "0644"
+
+- name: GitLab CE deposu
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/gitlab-ce.asc] https://packages.gitlab.com/gitlab/gitlab-ce/ubuntu/ {{ ansible_facts['distribution_release'] }} main"
+    filename: gitlab-ce
+    state: present
+    update_cache: true
+
+- name: GitLab ayar klasörü
+  ansible.builtin.file:
+    path: /etc/gitlab
+    state: directory
+    mode: "0755"
+
+# Ayar paketten ÖNCE yazılır: ilk kurulum doğrudan doğru ayarlarla yapılır
+- name: GitLab yapılandırması
+  ansible.builtin.template:
+    src: gitlab.rb.j2
+    dest: /etc/gitlab/gitlab.rb
+    mode: "0600"
+  notify: gitlab reconfigure
+
+- name: "GitLab CE {{ gitlab_version }} kur"
+  ansible.builtin.apt:
+    name: "gitlab-ce={{ gitlab_version }}"
+    state: present
+  environment:
+    EXTERNAL_URL: "https://{{ gitlab_hostname }}"
+
+# Baseline rolündeki 'apt dist-upgrade' GitLab'ı habersizce yükseltmesin
+- name: GitLab sürümünü kilitle
+  ansible.builtin.dpkg_selections:
+    name: gitlab-ce
+    selection: hold
+
+- name: Bekleyen ayar değişikliklerini şimdi uygula
+  ansible.builtin.meta: flush_handlers
+
+# Sertifika doğrulaması AÇIK: sunucu Lab CA'ya güveniyorsa geçer
+- name: GitLab hazır olsun
+  ansible.builtin.uri:
+    url: "https://{{ gitlab_hostname }}/users/sign_in"
+    status_code: 200
+  register: gitlab_ready
+  until: gitlab_ready.status == 200
+  retries: 60
+  delay: 10
+
+# Varsayılan olarak herkes hesap açabilir; lab'de kapatıyoruz
+- name: Yeni kullanıcı kaydını kapat
+  ansible.builtin.command: >
+    gitlab-rails runner
+    "ApplicationSetting.current.update!(signup_enabled: false)"
+  changed_when: false

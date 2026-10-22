@@ -1,0 +1,17 @@
+# Ansible tarafından yönetilir (roles/gitlab). Elle düzenleme.
+external_url 'https://{{ gitlab_hostname }}'
+registry_external_url 'https://{{ registry_hostname }}'
+
+# Lab CA sertifikası (lab_cert rolü üretir ve yeniler)
+letsencrypt['enable'] = false
+nginx['redirect_http_to_https'] = true
+nginx['ssl_certificate'] = '/etc/ssl/lab/gitlab.crt'
+nginx['ssl_certificate_key'] = '/etc/ssl/lab/gitlab.key'
+registry_nginx['ssl_certificate'] = '/etc/ssl/lab/gitlab.crt'
+registry_nginx['ssl_certificate_key'] = '/etc/ssl/lab/gitlab.key'
+
+gitlab_rails['time_zone'] = 'Europe/Istanbul'
+
+# Kaynak kullanımı: dahili izlemeyi kapat (Sprint 6'da Prometheus/Grafana var)
+prometheus_monitoring['enable'] = false
+puma['worker_processes'] = 4

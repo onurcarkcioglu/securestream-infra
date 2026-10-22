@@ -10,3 +10,4 @@
           - "DNS:{{ gitlab_hostname }}"
           - "DNS:{{ registry_hostname }}"
           - "DNS:{{ inventory_hostname }}.{{ lab_domain }}"
+    - role: gitlab
