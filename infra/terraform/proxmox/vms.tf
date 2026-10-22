@@ -45,6 +45,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
 
   memory {
     dedicated = each.value.memory
+    floating  = each.value.memory
   }
 
   disk {
