@@ -3,7 +3,7 @@
 # Tekrar çalıştırmak güvenlidir (helm upgrade --install idempotent).
 set -euo pipefail
 cd "$(dirname "$0")"
-source versions.env
+source versions.conf
 
 echo "==> MetalLB ${METALLB_VERSION}"
 helm upgrade --install metallb metallb/metallb \
