@@ -58,3 +58,4 @@
 - ss-mgmt anahtari carkcioglu hesabina Keys::CreateService ile eklendi (1 yil, auth+signing).
 - Ders: profil formundan e-posta degistirmek unconfirmed_email birakir; u.confirm onu onaylar.
 - BEKLEYEN: root parolasi 24+ karakter, root ve carkcioglu icin 2FA.
+- BEKLEYEN: apt_repository -> deb822_repository (gitlab ve gitlab_runner rolleri).

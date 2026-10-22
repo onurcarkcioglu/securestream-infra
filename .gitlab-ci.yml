@@ -1,0 +1,17 @@
+# Sprint 1 duman testi: runner calisiyor mu, guvenli mi?
+# Sprint 2'de gercek pipeline ile degisecek.
+default:
+  tags: [docker]
+  image: alpine:3.22
+
+runner-smoke:
+  stage: test
+  script:
+    - echo "Runner - $CI_RUNNER_DESCRIPTION / is - $CI_JOB_ID"
+    - id
+    # Privileged kapali mi? CapEff degeri 0000003fffffffff gibi tam yetki OLMAMALI.
+    - grep CapEff /proc/self/status
+    # Lab DNS calisiyor mu?
+    - nslookup gitlab.securestream.lab
+    # Lab CA ile GitLab'a TLS baglantisi
+    - wget -q --ca-certificate="$CI_SERVER_TLS_CA_FILE" -O /dev/null https://gitlab.securestream.lab/users/sign_in && echo "TLS tamam"

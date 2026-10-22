@@ -1,0 +1,10 @@
+---
+- name: restart docker
+  ansible.builtin.systemd:
+    name: docker
+    state: restarted
+
+- name: restart gitlab-runner
+  ansible.builtin.systemd:
+    name: gitlab-runner
+    state: restarted

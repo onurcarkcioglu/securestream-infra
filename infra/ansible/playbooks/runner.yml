@@ -1,0 +1,6 @@
+---
+- name: GitLab Runner (Docker executor)
+  hosts: runner
+  become: true
+  roles:
+    - gitlab_runner

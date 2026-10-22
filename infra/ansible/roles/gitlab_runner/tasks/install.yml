@@ -1,0 +1,18 @@
+---
+- name: Surum secilmis olmali
+  ansible.builtin.assert:
+    that: gitlab_runner_version | length > 0
+    fail_msg: "gitlab_runner_version bos. apt-cache madison gitlab-runner ile secip group_vars/runner/main.yml'e yaz."
+
+- name: GitLab Runner sabit surumle kurulu
+  ansible.builtin.apt:
+    name:
+      - "gitlab-runner={{ gitlab_runner_version }}"
+      - "gitlab-runner-helper-images={{ gitlab_runner_version }}"
+    state: present
+
+- name: Surum kilitli (apt upgrade ile kendiliginden yukselmez)
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop: [gitlab-runner, gitlab-runner-helper-images]

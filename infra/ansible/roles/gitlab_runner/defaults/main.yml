@@ -1,0 +1,10 @@
+---
+# Surum bos birakilirsa rol durur; apt-cache madison ile secilip group_vars/runner/main.yml'e yazilir.
+gitlab_runner_version: ""
+gitlab_runner_url: "https://gitlab.{{ lab_domain }}"
+gitlab_runner_name: "{{ inventory_hostname }}-docker"
+gitlab_runner_concurrent: 4
+gitlab_runner_default_image: "alpine:3.22"
+gitlab_runner_ca_file: "/usr/local/share/ca-certificates/securestream-root-ca.crt"
+# Token Ansible Vault'tan gelir, repoda acik halde durmaz.
+gitlab_runner_token: "{{ vault_gitlab_runner_token }}"

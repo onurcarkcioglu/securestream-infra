@@ -1,0 +1,3 @@
+---
+# GitLab sunucusu 19.5.1 -> runner ayni major.minor olmali.
+gitlab_runner_version: "19.5.0-1"

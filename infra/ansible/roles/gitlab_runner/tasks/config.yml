@@ -1,0 +1,38 @@
+---
+- name: Lab CA dosyasi var mi
+  ansible.builtin.stat:
+    path: "{{ gitlab_runner_ca_file }}"
+  register: runner_ca
+
+- name: Lab CA olmadan devam etme
+  ansible.builtin.assert:
+    that: runner_ca.stat.exists
+    fail_msg: "{{ gitlab_runner_ca_file }} yok. Once ca_trust rolu calismali."
+
+- name: config.toml (token icerir, loga yazilmaz)
+  ansible.builtin.template:
+    src: config.toml.j2
+    dest: /etc/gitlab-runner/config.toml
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: restart gitlab-runner
+
+- name: GitLab Runner servisi acik
+  ansible.builtin.systemd:
+    name: gitlab-runner
+    enabled: true
+    state: started
+
+- name: Handler'lari simdi calistir
+  ansible.builtin.meta: flush_handlers
+
+- name: Runner GitLab'a baglanabiliyor mu
+  ansible.builtin.command: gitlab-runner verify
+  register: runner_verify
+  changed_when: false
+
+- name: Dogrulama sonucu
+  ansible.builtin.debug:
+    var: runner_verify.stderr_lines

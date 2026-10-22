@@ -1,0 +1,53 @@
+---
+- name: Docker ve on gereksinimler kurulu
+  ansible.builtin.apt:
+    name: [docker.io, ca-certificates, curl]
+    state: present
+    update_cache: true
+
+- name: Docker gunluk boyutu sinirli
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": { "max-size": "10m", "max-file": "3" },
+        "live-restore": true
+      }
+    mode: "0644"
+  notify: restart docker
+
+- name: Docker servisi acik
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Anahtar klasoru var
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: GitLab Runner apt imza anahtari
+  ansible.builtin.get_url:
+    url: https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+    dest: /etc/apt/keyrings/gitlab-runner.asc
+    mode: "0644"
+
+- name: GitLab Runner paketleri sadece GitLab deposundan gelir
+  ansible.builtin.copy:
+    dest: /etc/apt/preferences.d/gitlab-runner
+    content: |
+      Explanation: Ubuntu deposundaki eski gitlab-runner paketini engelle
+      Package: gitlab-runner gitlab-runner-helper-images
+      Pin: origin packages.gitlab.com
+      Pin-Priority: 1001
+    mode: "0644"
+
+- name: GitLab Runner apt deposu
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/gitlab-runner.asc] https://packages.gitlab.com/runner/gitlab-runner/ubuntu/ {{ ansible_facts['distribution_release'] }} main"
+    filename: gitlab-runner
+    state: present
+    update_cache: true

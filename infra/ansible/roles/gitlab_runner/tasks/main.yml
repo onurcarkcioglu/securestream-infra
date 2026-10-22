@@ -1,0 +1,12 @@
+---
+- name: Docker ve GitLab Runner deposu
+  ansible.builtin.import_tasks: repo.yml
+  tags: [repo]
+
+- name: GitLab Runner paketleri
+  ansible.builtin.import_tasks: install.yml
+  tags: [install]
+
+- name: GitLab Runner yapilandirmasi
+  ansible.builtin.import_tasks: config.yml
+  tags: [config]
