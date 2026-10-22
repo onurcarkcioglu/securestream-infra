@@ -1,0 +1,17 @@
+# Bu dosya Terraform tarafından üretilir. Elle düzenleme; vms.tf'i değiştir.
+%{ for role in roles ~}
+[${role}]
+%{ for name, vm in vms ~}
+%{ if vm.role == role ~}
+${name} ansible_host=${vm.ip}
+%{ endif ~}
+%{ endfor ~}
+
+%{ endfor ~}
+[k3s:children]
+k3s_server
+k3s_agent
+
+[all:vars]
+ansible_user=ubuntu
+ansible_python_interpreter=/usr/bin/python3
