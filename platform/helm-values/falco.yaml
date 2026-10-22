@@ -1,0 +1,12 @@
+# Kernel 6.8: modern eBPF surucusu (kernel modulu derlemeye gerek yok).
+driver:
+  kind: modern_ebpf
+tty: true
+# k3s containerd soketi standart yolda degil.
+collectors:
+  containerd:
+    socket: /run/k3s/containerd/containerd.sock
+  containerEngine:
+    engines:
+      containerd:
+        sockets: ["/run/k3s/containerd/containerd.sock"]
