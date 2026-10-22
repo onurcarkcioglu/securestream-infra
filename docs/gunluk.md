@@ -59,3 +59,12 @@
 - Ders: profil formundan e-posta degistirmek unconfirmed_email birakir; u.confirm onu onaylar.
 - BEKLEYEN: root parolasi 24+ karakter, root ve carkcioglu icin 2FA.
 - BEKLEYEN: apt_repository -> deb822_repository (gitlab ve gitlab_runner rolleri).
+
+## Sprint 1 - KAPANIS: GitLab Runner (2026-10-22)
+- ss-runner: docker.io + gitlab-runner 19.5.0-1 (hold), Docker executor, grup runner'i, etiketler docker/securestream, run_untagged=false.
+- Token: CreateRunnerService -> SSH pipe -> ansible-vault encrypt_string. Hic ekranda gorunmedi.
+- Guvenlik: privileged=false, no-new-privileges, tls-ca-file=lab CA, config.toml 0600 + no_log.
+- Kalite: --syntax-check, --check --diff temiz, ikinci turda changed=0.
+- Duman testi (pipeline #3 success): CapEff kisitli, lab DNS, CA ile TLS tamam, CA'siz TLS reddedildi.
+- Ders: Alpine wget = BusyBox, --ca-certificate yok; curl --cacert kullan.
+- Ders: --check modunda kurulmamis paket icin dpkg_selections patlar -> when: not ansible_check_mode.
