@@ -1,0 +1,36 @@
+# CI deploy kimligi: yalnizca catalog namespace'i, yalnizca chart'in kaynaklari.
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: catalog-deployer, namespace: catalog }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: { name: catalog-deployer, namespace: catalog }
+rules:
+  - apiGroups: [""]
+    resources: [secrets, services, serviceaccounts, configmaps]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [pods, events, endpoints]
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [deployments, replicasets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses, networkpolicies]
+    verbs: [get, list, watch, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: { name: catalog-deployer, namespace: catalog }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: catalog-deployer }
+subjects:
+  - { kind: ServiceAccount, name: catalog-deployer, namespace: catalog }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: catalog-deployer-token
+  namespace: catalog
+  annotations: { kubernetes.io/service-account.name: catalog-deployer }
+type: kubernetes.io/service-account-token
