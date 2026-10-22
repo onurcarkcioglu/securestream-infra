@@ -1,0 +1,17 @@
+# Lab: tek replika yeterli (uretimde admission controller en az 3 replika olmali).
+admissionController:
+  replicas: 1
+backgroundController:
+  replicas: 1
+cleanupController:
+  replicas: 1
+reportsController:
+  replicas: 1
+# Node'un sertifika deposu (lab CA dahil, ca_trust rolu ekledi) Kyverno'ya baglanir:
+# hem lab registry'ye hem genel registry'lere guvenir.
+global:
+  caCertificates:
+    volume:
+      hostPath:
+        path: /etc/ssl/certs/ca-certificates.crt
+        type: File

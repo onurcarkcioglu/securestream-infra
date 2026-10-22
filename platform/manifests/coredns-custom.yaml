@@ -1,0 +1,13 @@
+# k3s CoreDNS: securestream.lab sorgulari dogrudan lab DNS'ine (ss-infra) gider.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+data:
+  securestream.server: |
+    securestream.lab:53 {
+      errors
+      cache 30
+      forward . 10.10.10.5
+    }

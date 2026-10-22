@@ -1,0 +1,36 @@
+# Yalnizca SecureStream pipeline'inin cosign anahtariyla imzaladigi imajlar calisabilir.
+apiVersion: policies.kyverno.io/v1
+kind: ImageValidatingPolicy
+metadata:
+  name: verify-securestream-images
+spec:
+  validationActions: [Deny]
+  webhookConfiguration:
+    timeoutSeconds: 15
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ['']
+        apiVersions: ['v1']
+        operations: ['CREATE']
+        resources: ['pods']
+  matchImageReferences:
+    - glob: 'registry.securestream.lab/securestream/*'
+  credentials:
+    secrets: [registry-pull]
+  attestors:
+    - name: cosign
+      cosign:
+        key:
+          data: |
+            -----BEGIN PUBLIC KEY-----
+            MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFg+9iBlPKmxB0tWFNH6exYVWYQ5m
+            s+i2GydEXqhAEOyNqNCbIxwKB3GVaVajECA850F8sOUZrZyOQ3QZ/h7/dA==
+            -----END PUBLIC KEY-----
+        ctlog:
+          # Lab: imzalar kamuya acik Rekor loguna yazilmiyor (--tlog-upload=false).
+          insecureIgnoreTlog: true
+          insecureIgnoreSCT: true
+  validations:
+    - expression: >-
+        images.containers.map(image, verifyImageSignatures(image, [attestors.cosign])).all(e, e > 0)
+      message: 'Imza dogrulanamadi: yalnizca SecureStream pipeline imzali imajlar calisabilir'
