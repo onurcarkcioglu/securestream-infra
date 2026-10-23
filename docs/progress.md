@@ -238,3 +238,46 @@ Scope given by the human: Item 4, then Item 8, plus the open Item 5 check. Items
 - Local use of `scripts/iac-scan.sh gate` needs `SCAN_GATE=~/ci-templates/scripts/scan-gate.py`.
 - Open: remote branches `ci/templates` (both repositories) and the release-candidate tags `v1.0.0-rc.1`, `-rc.2`
   are left for the human; `ci-templates` is not mirrored to GitHub (not requested).
+
+## Session report 2026-10-23 (evening)
+
+Session 21:30–22:15 TSİ. Scope: Item 6 only (human decision: do not start Item 7).
+
+### Item 6 evidence
+
+| What | Result |
+|---|---|
+| Project | `securestream/ci-templates` (private, no secrets), protected tags `v*` (Maintainer), job token allowlist `catalog-api`, `securestream`; checked: catalog-api → ci-templates yes, catalog-api → securestream no |
+| Commits | ci-templates `13a5fdf`, `fb5442c` (= `v1.0.0` = `v1.0.0-rc.2`); securestream `a51b61b`, `652ea2d`, `89663ba`; catalog-api `49b49e4`, `0b0c115` |
+| Pipelines | ci-templates 66; branches with `rc.2`: catalog-api 70 (11/11), securestream 71 (5/5); `main`: catalog-api 73 (16/16), securestream 74 (7/7), 75 (docs) |
+| Same behaviour | checkov-helm 96 checks / 4 excepted / 0 blocking; iac-scan 18/38/40/24 checks, 0 blocking; DefectDojo reimports into the same tests with `created=0 closed=0`; Sonar gate PASSED |
+| `main` config before push | GitLab CI lint dry run (`ref: main`): valid, 16 jobs |
+| Traceability | `requirements-traceability.md`: "Central CI templates" → Done; baseline "Automation, standardisation…" → Done |
+
+### Assistant mistakes and how they were caught
+
+| Mistake | Caught by |
+|---|---|
+| Proposed keeping the shared scripts in `securestream` and adding `catalog-api` to its job token allowlist (every catalog-api job could read vault files and infrastructure code) | The human reviewer; separate project instead (ADR 0009) |
+| Template set `DD_REPORTS: ""` / `CHECKOV_HELM_VALUES` as job variables, which override the consumer's global values | Self-review before the first consumer push; fixed in `rc.2` (lessons learned #34) |
+| Read `accessible?` in the wrong direction when checking the allowlist (reported false for allowed projects) | Re-checked in both directions plus a negative case |
+| A YAML check in an `&&` chain used a venv without PyYAML; commit and tag were silently skipped and the tag push failed | Reading the push error and `git status` before retrying |
+
+### Deliberate deviations
+
+- Separate project instead of `ci-templates/` in `securestream`; tag instead of `main` (human decision, ADR 0009).
+- Two files beyond the brief's eight: `images.yml` (one place for digests) and `tools.yml` (`ss-tools`).
+- New `.pre` job `ss-tools`; securestream `exceptions-check` moved to stage `test`; securestream `secret-scan` also writes
+  `gitleaks.json`.
+
+### Open work
+
+- **`ci-templates` is not mirrored to GitHub**, so the public copy of `securestream` shows `include:` lines whose
+  templates are not visible. To be solved tomorrow with a mirror job like `publish-github` (gitleaks on the result,
+  fine-grained token, `main` and tags only).
+- Remote branches `ci/templates` (both repositories) and tags `v1.0.0-rc.1`, `v1.0.0-rc.2`: left for the human.
+- Tag pinning: a Maintainer can delete and recreate a protected tag; a commit SHA pin would be stricter (ADR 0009).
+- Local `scripts/iac-scan.sh gate` needs `SCAN_GATE=~/ci-templates/scripts/scan-gate.py`.
+- From the earlier report, still open: Items 7, 9, 10; NOPASSWD sudo / same Unix user; read-only token renewal
+  (next 2026-10-24 05:14 UTC); DefectDojo Risk Acceptance rewritten on every run; no SonarQube/DefectDojo backups;
+  upgrades SonarQube 26.10 (after 2026-10-31) and PostgreSQL 16.15 (after 2026-11-05).
