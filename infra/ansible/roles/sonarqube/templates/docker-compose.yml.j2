@@ -1,0 +1,47 @@
+# Ansible tarafindan yonetilir (roles/sonarqube). Elle duzenleme.
+# SonarQube Community Build {{ sonarqube_version }} + PostgreSQL 16. Imajlar digest ile.
+#  - web yalnizca 127.0.0.1:9000; TLS host nginx'te (443)
+#  - veritabani sifresi 0600 env dosyasindan; JDBC URL'inde sifre yok
+#  - ulimit'ler Docker daemon varsayilani (roles/appsec_host): nofile 131072, nproc 8192
+name: sonarqube
+
+services:
+  sonarqube:
+    image: "{{ sonarqube_image }}"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: [sonarqube.env]
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonarqube
+      SONAR_JDBC_USERNAME: sonarqube
+      SONAR_TELEMETRY_ENABLE: "false"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    ports:
+      - "127.0.0.1:9000:9000"
+
+  postgres:
+    image: "{{ sonarqube_postgres_image }}"
+    restart: unless-stopped
+    env_file: [postgres.env]
+    environment:
+      PGDATA: /var/lib/postgresql/data
+      POSTGRES_DB: sonarqube
+      POSTGRES_USER: sonarqube
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonarqube -d sonarqube"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - sonarqube_postgres:/var/lib/postgresql/data
+
+volumes:
+  sonarqube_data: {}
+  sonarqube_extensions: {}
+  sonarqube_logs: {}
+  sonarqube_postgres: {}

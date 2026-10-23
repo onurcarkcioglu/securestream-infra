@@ -1,7 +1,8 @@
 ---
-- name: AppSec sunucusu (ss-sec) - DefectDojo
+- name: AppSec sunucusu (ss-sec) - DefectDojo, SonarQube
   hosts: security
   become: true
   roles:
     - appsec_host
     - defectdojo
+    - sonarqube

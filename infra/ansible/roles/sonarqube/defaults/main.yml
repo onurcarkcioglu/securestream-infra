@@ -1,0 +1,8 @@
+---
+sonarqube_dir: /opt/sonarqube
+# lab_cert rolunun varsayilan klasoru (include_role degiskenleri disari acmaz)
+sonarqube_cert_dir: /etc/ssl/lab
+# Analiz raporu yuklemesi (scanner -> /api/ce/submit)
+sonarqube_max_upload: 50m
+# Ilk acilista Elasticsearch indeksleri ve migration'lar: 60 x 10 sn
+sonarqube_wait_retries: 60

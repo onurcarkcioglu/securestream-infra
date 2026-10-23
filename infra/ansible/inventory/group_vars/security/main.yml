@@ -1,5 +1,5 @@
 ---
-# ss-sec: AppSec araclari (DefectDojo; SonarQube Item 4). Surumler burada sabit; ~2 hafta bekleme kurali.
+# ss-sec: AppSec araclari (DefectDojo, SonarQube). Surumler burada sabit; ~2 hafta bekleme kurali.
 appsec_docker_version: "29.1.3-0ubuntu3~24.04.2"
 appsec_compose_version: "2.40.3+ds1-0ubuntu1~24.04.1"
 
@@ -18,3 +18,14 @@ defectdojo_credential_aes_key: "{{ vault_dd_credential_aes_key }}"
 defectdojo_db_password: "{{ vault_dd_db_password }}"
 defectdojo_admin_password: "{{ vault_dd_admin_password }}"
 defectdojo_jira_webhook_secret: "{{ vault_dd_jira_webhook_secret }}"
+
+# SonarQube Community Build 26.9 (2026-10-02). Community Build'in LTA surumu yok (LTA yalnizca ucretli surumlerde);
+# 26.10 (2026-10-17) 2 haftalik bekleme suresini doldurmadi. PostgreSQL 16.15 digest'leri 2026-10-22'de yeniden
+# basildi; 2 hafta dolana kadar 16.14 (digest 2026-07-08).
+sonarqube_version: "26.9.0.129388"
+sonarqube_image: "sonarqube:26.9.0.129388-community@sha256:c0f1160bccfa435db4168c2d7df69af3c3ea7bfeb87395613014048fb33a68c1"
+sonarqube_postgres_image: "postgres:16.14-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+sonarqube_hostname: "sonar.{{ lab_domain }}"
+
+sonarqube_admin_password: "{{ vault_sonar_admin_password }}"
+sonarqube_db_password: "{{ vault_sonar_db_password }}"
