@@ -3,8 +3,9 @@
 
 Usage: exceptions-check.py [--file security/exceptions.yaml] [--today YYYY-MM-DD]
 
-Fails (exit 1) on: a missing or unparsable file, a missing or empty field, a malformed or duplicate id,
-an unknown tool, an exception that has expired, starts in the future, or runs longer than 90 days.
+Fails (exit 1) on: a missing or unparsable file, a missing or empty field, a malformed or
+duplicate id, an unknown tool, an exception that has expired, starts in the future, or runs
+longer than 90 days.
 An exception that expires within 14 days is reported as WARN (does not fail).
 Schema and process: docs/vulnerability-management.md.
 """
@@ -68,7 +69,9 @@ def check(entry: object, today: dt.date, seen: set[str]) -> tuple[list[str], lis
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--file", default="security/exceptions.yaml", type=Path)
     ap.add_argument("--today", type=dt.date.fromisoformat, default=dt.date.today())
     args = ap.parse_args()

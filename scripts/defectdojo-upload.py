@@ -2,15 +2,18 @@
 """Reimport scanner reports into DefectDojo and sync security/exceptions.yaml as Risk Acceptances.
 
 Usage (CI job defectdojo-upload):
-  DD_API_KEY=... defectdojo-upload.py --url https://defectdojo.securestream.lab --product catalog-api \
-      --report gitleaks=gitleaks.json --report checkov-helm=checkov-helm.json@deploy/helm ...
+  DD_API_KEY=... defectdojo-upload.py --url https://defectdojo.securestream.lab \
+      --product catalog-api --report gitleaks=gitleaks.json \
+      --report checkov-helm=checkov-helm.json@deploy/helm ...
 
---report LABEL=FILE[@BASE]: LABEL picks DefectDojo's parser (table below) and is the test title, so each
-report keeps its own test in the "CI/CD" engagement. BASE is the directory the scanner was given, used to
-map finding paths back to repository paths for exception matching (same rule as scan-gate.py).
+--report LABEL=FILE[@BASE]: LABEL picks DefectDojo's parser (table below) and is the test title,
+so each report keeps its own test in the "CI/CD" engagement. BASE is the directory the scanner was
+given, used to map finding paths back to repository paths for exception matching (as scan-gate.py).
 
-Every reimport closes findings that are no longer reported. A missing report file is skipped with a
-notice (the job that writes it may not run on this pipeline); any API error fails the job.
+Every reimport closes findings that are no longer reported in that test. The first upload of a
+label creates its test with import-scan (reimport cannot create a test without auto_create_context).
+A missing report file is skipped with a notice (the job that writes it may not run on this
+pipeline); any API error fails the job.
 Exceptions: each entry becomes a Risk Acceptance named "<product>:<id>" that accepts the matching
 findings until `expires`; DefectDojo reactivates them when it expires.
 The API key is read from the environment only and never printed.
@@ -19,13 +22,12 @@ The API key is read from the environment only and never printed.
 import argparse
 import datetime as dt
 import fnmatch
+import http.client
 import json
 import os
 import ssl
 import sys
-import urllib.error
 import urllib.parse
-import urllib.request
 import uuid
 from pathlib import Path
 
@@ -44,26 +46,47 @@ PARSERS = {
 
 
 class Api:
+    """Minimal DefectDojo API v2 client. HTTPS only (http.client.HTTPSConnection), lab CA only."""
+
     def __init__(self, url: str, key: str, cafile: str | None):
-        self.base = url.rstrip("/") + "/api/v2"
+        parsed = urllib.parse.urlsplit(url)
+        if parsed.scheme != "https" or not parsed.hostname:
+            sys.exit(f"FAIL --url must be https://host, got {url!r}")
+        self.host, self.port = parsed.hostname, parsed.port or 443
+        self.prefix = parsed.path.rstrip("/") + "/api/v2"
         self.auth = {"Authorization": f"Token {key}"}
         self.ctx = ssl.create_default_context(cafile=cafile)
 
-    def call(self, method: str, path: str, body: dict | None = None, data: bytes | None = None,
-             ctype: str = "application/json") -> dict:
+    def call(
+        self,
+        method: str,
+        path: str,
+        body: dict | None = None,
+        data: bytes | None = None,
+        ctype: str = "application/json",
+        allow: tuple[int, ...] = (),
+    ) -> dict:
+        """Return the JSON body; exit on an error status unless it is listed in `allow`."""
         if body is not None:
             data = json.dumps(body).encode()
-        req = urllib.request.Request(self.base + path, data=data, method=method,
-                                     headers={**self.auth, "Content-Type": ctype})
+        conn = http.client.HTTPSConnection(self.host, self.port, context=self.ctx, timeout=300)
         try:
-            with urllib.request.urlopen(req, context=self.ctx, timeout=300) as resp:
-                raw = resp.read()
-        except urllib.error.HTTPError as err:
-            detail = err.read().decode(errors="replace")[:800]
-            sys.exit(f"FAIL {method} {path.split('?')[0]}: HTTP {err.code} {detail}")
-        except urllib.error.URLError as err:
-            sys.exit(f"FAIL {method} {path.split('?')[0]}: {err.reason}")
-        return json.loads(raw) if raw else {}
+            conn.request(
+                method, self.prefix + path, body=data, headers={**self.auth, "Content-Type": ctype}
+            )
+            resp = conn.getresponse()
+            raw = resp.read()
+        except (OSError, http.client.HTTPException) as err:
+            sys.exit(f"FAIL {method} {path.split('?')[0]}: {err}")
+        finally:
+            conn.close()
+        if resp.status >= 400 and resp.status not in allow:
+            detail = raw.decode(errors="replace")[:800]
+            sys.exit(f"FAIL {method} {path.split('?')[0]}: HTTP {resp.status} {detail}")
+        result = json.loads(raw) if raw else {}
+        if resp.status >= 400:
+            result["_status"] = resp.status
+        return result
 
     def all(self, path: str, **params: object) -> list[dict]:
         query = urllib.parse.urlencode({**params, "limit": 1000})
@@ -74,10 +97,11 @@ def multipart(fields: dict[str, str], file_field: str, file_path: Path) -> tuple
     boundary = uuid.uuid4().hex
     parts = []
     for name, value in fields.items():
-        parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'.encode())
+        header = f'Content-Disposition: form-data; name="{name}"'
+        parts.append(f"--{boundary}\r\n{header}\r\n\r\n{value}\r\n".encode())
+    header = f'Content-Disposition: form-data; name="{file_field}"; filename="{file_path.name}"'
     parts.append(
-        f'--{boundary}\r\nContent-Disposition: form-data; name="{file_field}"; filename="{file_path.name}"\r\n'
-        f"Content-Type: application/octet-stream\r\n\r\n".encode()
+        f"--{boundary}\r\n{header}\r\nContent-Type: application/octet-stream\r\n\r\n".encode()
         + file_path.read_bytes()
         + b"\r\n"
     )
@@ -86,7 +110,7 @@ def multipart(fields: dict[str, str], file_field: str, file_path: Path) -> tuple
 
 
 def normalise(path: str, base: str) -> str:
-    # Same rule as scan-gate.py: scanner paths are relative to the scanned directory or to the repository.
+    # As scan-gate.py: scanner paths are relative to the scanned directory or to the repository.
     rel = path.lstrip("/")
     base = base.rstrip("/")
     if not base or rel == base or rel.startswith(base + "/"):
@@ -99,7 +123,7 @@ def parse_report(spec: str) -> dict:
     file, _, base = rest.partition("@")
     prefix = label.split("-")[0]
     if not file or prefix not in PARSERS:
-        sys.exit(f"FAIL --report {spec!r}: expected LABEL=FILE[@BASE], LABEL starting with {sorted(PARSERS)}")
+        sys.exit(f"FAIL --report {spec!r}: expected LABEL=FILE[@BASE], LABEL in {sorted(PARSERS)}")
     scan_type, tool = PARSERS[prefix]
     return {"label": label, "file": Path(file), "base": base, "scan_type": scan_type, "tool": tool}
 
@@ -126,10 +150,21 @@ def reimport(api: Api, args: argparse.Namespace, rep: dict) -> int | None:
         "version": env.get("CI_COMMIT_SHORT_SHA", ""),
     }
     body, ctype = multipart({k: v for k, v in fields.items() if v}, "file", rep["file"])
-    res = api.call("POST", "/reimport-scan/", data=body, ctype=ctype)
+    res = api.call("POST", "/reimport-scan/", data=body, ctype=ctype, allow=(404,))
+    if res.get("_status") == 404:
+        # First upload of this label, no test yet: import-scan creates it in the engagement.
+        # close_old_findings must be off here: on import it acts on every test of the same scan type
+        # in the engagement (trivy-fs and trivy-image share the Trivy parser).
+        fields["close_old_findings"] = "false"
+        body, ctype = multipart({k: v for k, v in fields.items() if v}, "file", rep["file"])
+        res = api.call("POST", "/import-scan/", data=body, ctype=ctype)
+        print(f"NEW  {rep['label']}: {rep['scan_type']} -> test {res.get('test')} created")
+        return res.get("test")
     delta = (res.get("statistics") or {}).get("delta") or {}
-    counts = " ".join(f"{k}={(delta.get(k) or {}).get('total', {}).get('total', 0)}"
-                      for k in ("created", "closed", "reactivated", "untouched"))
+    counts = " ".join(
+        f"{k}={(delta.get(k) or {}).get('total', {}).get('total', 0)}"
+        for k in ("created", "closed", "reactivated", "untouched")
+    )
     print(f"OK   {rep['label']}: {rep['scan_type']} -> test {res.get('test')} {counts}")
     return res.get("test")
 
@@ -147,7 +182,9 @@ def sync_exceptions(api: Api, args: argparse.Namespace, tests: list[tuple[dict, 
         name = f"{args.product}:{exc['id']}"
         expires = dt.date.fromisoformat(str(exc["expires"]))
         if expires < today:
-            print(f"RA   {name}: expired {expires}, not synced (exceptions-check fails the pipeline)")
+            print(
+                f"RA   {name}: expired {expires}, not synced (exceptions-check fails the pipeline)"
+            )
             continue
         ids = []
         for rep, test in tests:
@@ -160,7 +197,7 @@ def sync_exceptions(api: Api, args: argparse.Namespace, tests: list[tuple[dict, 
                     ids.append(f["id"])
         ra = existing.get(name)
         if ra is None and not ids:
-            print(f"RA   {name}: no matching finding ({exc['tool']} {exc['rule']} {exc['path']}), nothing to accept")
+            print(f"RA   {name}: no finding matches {exc['tool']} {exc['rule']} {exc['path']}")
             continue
         fields = {
             "expiration_date": expires.isoformat(),
@@ -171,7 +208,11 @@ def sync_exceptions(api: Api, args: argparse.Namespace, tests: list[tuple[dict, 
             "reactivate_expired": True,
         }
         if ra is None:
-            ra = api.call("POST", "/risk_acceptance/", {"name": name, "owner": me, "accepted_findings": ids, **fields})
+            ra = api.call(
+                "POST",
+                "/risk_acceptance/",
+                {"name": name, "owner": me, "accepted_findings": ids, **fields},
+            )
             print(f"RA   {name}: created, {len(ids)} finding(s) accepted until {expires}")
             continue
         merged = sorted(set(ra.get("accepted_findings") or []) | set(ids))
@@ -180,13 +221,17 @@ def sync_exceptions(api: Api, args: argparse.Namespace, tests: list[tuple[dict, 
             changed["accepted_findings"] = merged
         if changed:
             api.call("PATCH", f"/risk_acceptance/{ra['id']}/", changed)
-            print(f"RA   {name}: updated {sorted(changed)}, {len(merged)} finding(s) until {expires}")
+            print(
+                f"RA   {name}: updated {sorted(changed)}, {len(merged)} finding(s) until {expires}"
+            )
         else:
             print(f"RA   {name}: up to date, {len(merged)} finding(s) until {expires}")
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--url", required=True)
     ap.add_argument("--product", required=True)
     ap.add_argument("--engagement", default="CI/CD")
@@ -197,7 +242,9 @@ def main() -> int:
 
     key = os.environ.get("DD_API_KEY", "")
     if len(key) != 40:
-        sys.exit(f"FAIL DD_API_KEY has length {len(key)}, expected 40 (protected variable: main only)")
+        sys.exit(
+            f"FAIL DD_API_KEY has length {len(key)}, expected 40 (protected variable: main only)"
+        )
     api = Api(args.url, key, args.cafile)
 
     tests = []
