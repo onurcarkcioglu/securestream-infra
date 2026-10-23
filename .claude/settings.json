@@ -29,7 +29,13 @@
       "Bash(kubectl * -o yaml*)",
       "Bash(kubectl * -o json*)",
       "Edit(scripts/ci-status.sh)",
-      "Write(scripts/ci-status.sh)"
+      "Write(scripts/ci-status.sh)",
+      "Bash(git push * --delete*)",
+      "Bash(git push --delete*)",
+      "Bash(git push * -d *)",
+      "Bash(git push -d *)",
+      "Bash(git push * :**)",
+      "Bash(git branch -D *)"
     ],
     "ask": [
       "Bash(git push *)",

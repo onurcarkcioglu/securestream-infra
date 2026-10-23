@@ -46,6 +46,11 @@ Order kept as in the brief. Docker is not yet installed on ss-sec (Item 4 `appse
   file → FAIL, no files → FAIL).
 | 2b secret-scan gate (human request) | Done | `077019f`, `a6433f1` | Pipeline 43: vault check 4/4 OK (3 per-variable, 1 whole file), gitleaks 52 commits, no leaks; `allow_failure` removed; first version of the check failed on per-variable encryption (fixed, see ai-assisted-engineering) |
 
+- Correction (human request): deny rules against branch deletion in both repositories (`--delete`, `-d`, `:refspec`,
+  `git branch -D`). Deviation: the requested `Bash(git push * :*)` did not block `git push --dry-run origin :x` (trailing
+  `:*` is Claude Code's legacy prefix syntax); replaced by `Bash(git push * :**)`, which blocks it. Evidence: verification
+  log in `docs/ai-assisted-engineering.md`, lessons learned #23.
+
 ## Handoff (session stopped on request, 2026-10-23)
 
 Next order (human decision): **Item 5 (DefectDojo) → Item 4 (SonarQube) → Item 8 (read-only kubeconfig)**;

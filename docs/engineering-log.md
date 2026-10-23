@@ -140,3 +140,9 @@
 - securestream `secret-scan`: `allow_failure: true` kaldirildi (8c8c8a0'dan beri vardi). Tam gecmiste bulgu yok, allowlist eklenmedi.
 - `scripts/check-vault-encrypted.sh`: sir yollarindaki her dosya `$ANSIBLE_VAULT` basligiyla baslamali (yalnizca baslik okunur).
 - `publish-github` artik `needs: [secret-scan, iac-scan]`.
+
+## Dal silme icin deny kurallari (2026-10-23)
+- Iki repoda `.claude/settings.json` deny: `git push * --delete*`, `git push --delete*`, `git push * -d *`, `git push -d *`,
+  `git push * :**`, `git branch -D *`. Zararsiz dry-run testleri: hepsi engellendi (`ai-assisted-engineering.md`, verification log).
+- Istenen `git push * :*` kurali calismadi: sondaki `:*` Claude Code'da eski onek sozdizimi. `:**` ile degistirildi.
+- Asil kontrol sunucu tarafinda: korumali dallar ve rol yetkileri (lessons learned #23).
