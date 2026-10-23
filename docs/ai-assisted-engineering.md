@@ -60,6 +60,7 @@ Controls are only claimed after they were tested. Tests of the Claude Code setup
 | `git push --dry-run origin main` in auto mode (sends nothing) | Approval prompt shown: "Ask rule Bash(git push *) overrides auto mode for this command"; the human answered No and the command did not run | `ask` rules still apply in auto mode; the push decision stays with the human |
 | Proxmox root CA from the TLS chain (`openssl s_client -showcerts`) | pveproxy sends only the leaf certificate; the assistant stopped as instructed | The CA file came from the human; its SHA-256 matched the fingerprint the human read over a separate channel |
 | `scripts/tf.sh plan` with `PROXMOX_VE_INSECURE=false`; same with the lab CA in place of pve1's CA | Exit 0, no changes; with the wrong CA: `x509: certificate signed by unknown authority`, exit 1 | Verification is on and really checks the CA; registry and GitLab still reachable |
+| `sudo -n true` in auto mode, after adding ask rule `Bash(sudo *)` (ss-mgmt has passwordless sudo; before the rule, sudo ran without a prompt) | Approval prompt shown: "Ask rule Bash(sudo *) overrides auto mode"; the human answered No and the command did not run | Root on the bastion now needs a human yes per command; the NOPASSWD risk itself remains (see security-controls) |
 
 ## What the AI is good at here, and what it is not
 - **Good at:** first drafts of roles, pipelines and policies; reading release notes and schemas; turning a

@@ -8,7 +8,7 @@ gaps are listed openly with the planned fix. Evidence links point to the build l
 | Risk | How SecureStream addresses it | Status |
 |---|---|---|
 | **CICD-SEC-1** Insufficient flow control | `main` is protected; signing and deploy jobs run only on `main`; deploy uses `resource_group` (one at a time) and `--atomic` rollback | Done |
-| **CICD-SEC-2** Inadequate identity and access management | Personal GitLab account for daily work, `root` only for administration; Proxmox API token `terraform@pve` with only VM/datastore/SDN roles; deploy token limited to `read_registry` | Done · **Gap:** 2FA on GitLab accounts pending |
+| **CICD-SEC-2** Inadequate identity and access management | Personal GitLab account for daily work, `root` only for administration; Proxmox API token `terraform@pve` with only VM/datastore/SDN roles; deploy token limited to `read_registry` | Done · **Gap:** 2FA on GitLab accounts pending · **Known risk:** user `ubuntu` on ss-mgmt has passwordless (`NOPASSWD`) sudo; for the AI assistant it is limited by the Claude Code ask rule `Bash(sudo *)` (approval per command, verified 2026-10-23), not removed |
 | **CICD-SEC-3** Dependency chain abuse | Python dependencies pinned in `requirements.txt`; Trivy SCA on every commit; CI tool images pinned by digest | Done |
 | **CICD-SEC-4** Poisoned pipeline execution | Signing key and kubeconfig are *protected* variables — not exposed to pipelines on unprotected branches; runner is unprivileged | Done |
 | **CICD-SEC-5** Insufficient pipeline-based access controls | Group runner (not instance-wide), tagged jobs only (`run_untagged=false`); the deploy identity is a namespace-scoped Role (`can-i`: deploy yes, kube-system secrets no, nodes no) | Done |

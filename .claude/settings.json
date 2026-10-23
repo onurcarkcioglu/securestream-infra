@@ -18,7 +18,8 @@
       "Bash(git push *-f *)",
       "Bash(git push *-f)",
       "Bash(git push *+*)",
-      "Bash(terraform destroy *)"
+      "Bash(terraform destroy *)",
+      "Bash(*tf.sh destroy*)"
     ],
     "ask": [
       "Bash(git push *)",
@@ -32,7 +33,9 @@
       "Bash(vault token *)",
       "Bash(vault write *)",
       "Bash(vault policy *)",
-      "Bash(ssh *)"
+      "Bash(ssh *)",
+      "Bash(sudo *)",
+      "Bash(*tf.sh apply*)"
     ]
   }
 }
