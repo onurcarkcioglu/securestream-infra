@@ -29,3 +29,14 @@ sonarqube_hostname: "sonar.{{ lab_domain }}"
 
 sonarqube_admin_password: "{{ vault_sonar_admin_password }}"
 sonarqube_db_password: "{{ vault_sonar_db_password }}"
+
+# Dependency-Track 4.14.5 (2026-10-05). 5.x satiri (2026-08 sonrasi) farkli bir mimari; olgun 4.x satiri secildi.
+# PostgreSQL SonarQube ile ayni surum ve digest (16.14, yukaridaki not).
+dtrack_version: "4.14.5"
+dtrack_apiserver_image: "dependencytrack/apiserver:4.14.5@sha256:4d41f29ce886a7fcb94a424b3eb2bfd17497ba92d48d43896c48e87a69bcf335"
+dtrack_frontend_image: "dependencytrack/frontend:4.14.5@sha256:d675efbd80facddb696c21c82e1973d0dc83ae38b3c896d1c87bf78a26a6c9eb"
+dtrack_postgres_image: "{{ sonarqube_postgres_image }}"
+dtrack_hostname: "dtrack.{{ lab_domain }}"
+
+dtrack_admin_password: "{{ vault_dtrack_admin_password }}"
+dtrack_db_password: "{{ vault_dtrack_db_password }}"

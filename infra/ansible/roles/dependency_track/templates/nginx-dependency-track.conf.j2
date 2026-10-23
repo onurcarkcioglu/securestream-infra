@@ -1,0 +1,26 @@
+# Ansible tarafindan yonetilir (roles/dependency_track). Yalnizca 443; 80 dinlenmez.
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name {{ dtrack_hostname }};
+
+    ssl_certificate     {{ dtrack_cert_dir }}/dependency-track.crt;
+    ssl_certificate_key {{ dtrack_cert_dir }}/dependency-track.key;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    client_max_body_size {{ dtrack_max_upload }};
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 300s;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8082;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}

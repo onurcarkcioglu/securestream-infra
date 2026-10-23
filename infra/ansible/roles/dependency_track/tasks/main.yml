@@ -1,0 +1,111 @@
+---
+# Dependency-Track ilk sifresi admin/admin (ilk giriste degistirilmesi zorunlu); bootstrap vault'taki sifreye cevirir.
+- name: Gizli degerler tanimli olmali (vault.yml)
+  ansible.builtin.assert:
+    that:
+      - dtrack_admin_password | length >= 32
+      - dtrack_db_password | length >= 32
+    fail_msg: "group_vars/security/vault.yml eksik ya da kisa (deger basilmaz)"
+  no_log: true
+
+- name: Dependency-Track klasoru
+  ansible.builtin.file:
+    path: "{{ dtrack_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Gizli env dosyalari (loga yazilmaz)
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "{{ dtrack_dir }}/{{ item }}"
+    owner: root
+    group: root
+    mode: "0600"
+  loop: [apiserver.env, postgres.env, admin.env]
+  no_log: true
+  diff: false
+
+- name: docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ dtrack_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0640"
+  register: dtrack_compose_file
+
+- name: TLS sertifikasi (lab CA; anahtar sunucudan cikmaz)
+  ansible.builtin.include_role:
+    name: lab_cert
+  vars:
+    lab_cert_name: dependency-track
+    lab_cert_sans:
+      - "DNS:{{ dtrack_hostname }}"
+
+- name: nginx sanal sunucusu (443)
+  ansible.builtin.template:
+    src: nginx-dependency-track.conf.j2
+    dest: /etc/nginx/sites-available/dependency-track.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload nginx
+
+- name: nginx sanal sunucusu acik
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/dependency-track.conf
+    dest: /etc/nginx/sites-enabled/dependency-track.conf
+    state: link
+  notify: reload nginx
+  # Check modunda hedef dosya henuz yoksa link olusturulamaz
+  when: not ansible_check_mode
+
+- name: Docker kurulu mu (ilk calismada check modunda yok)
+  ansible.builtin.stat:
+    path: /usr/bin/docker
+  register: dtrack_docker
+
+- name: Dependency-Track konteynerleri
+  community.docker.docker_compose_v2:
+    project_src: "{{ dtrack_dir }}"
+    state: present
+    pull: missing
+  # Ilk check calismasinda compose dosyasi henuz yazilmadi
+  when: dtrack_docker.stat.exists and not (ansible_check_mode and dtrack_compose_file is changed)
+
+- name: Handler'lari simdi calistir
+  ansible.builtin.meta: flush_handlers
+
+- name: Dependency-Track TLS uzerinden hazir (ilk acilista sema ve veri kaynaklari)
+  ansible.builtin.uri:
+    url: "https://{{ dtrack_hostname }}/api/version"
+    return_content: true
+  register: dtrack_status
+  until: dtrack_status.status == 200
+  retries: "{{ dtrack_wait_retries }}"
+  delay: 10
+  when: not ansible_check_mode
+
+- name: Yonetim betigi
+  ansible.builtin.copy:
+    src: dtrack-admin.py
+    dest: "{{ dtrack_dir }}/dtrack-admin.py"
+    owner: root
+    group: root
+    mode: "0700"
+
+# Admin sifresi, CI takimi (yalnizca BOM_UPLOAD + PROJECT_CREATION_UPLOAD + VIEW_PORTFOLIO), varsayilan
+# Automation takiminin anahtarlari (API, idempotent). Cikti OK/CHANGED satirlari, sir basilmaz.
+- name: Dependency-Track yapilandirmasi (API)
+  ansible.builtin.command:
+    cmd: python3 {{ dtrack_dir }}/dtrack-admin.py bootstrap https://{{ dtrack_hostname }}
+  register: dtrack_bootstrap
+  changed_when: "'CHANGED' in dtrack_bootstrap.stdout"
+  when: not ansible_check_mode
+
+- name: Bootstrap sonucu
+  ansible.builtin.debug:
+    var: dtrack_bootstrap.stdout_lines
+  when: not ansible_check_mode

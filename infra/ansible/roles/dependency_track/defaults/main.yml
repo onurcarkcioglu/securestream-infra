@@ -1,0 +1,9 @@
+---
+dtrack_dir: /opt/dependency-track
+dtrack_cert_dir: /etc/ssl/lab
+# SBOM yuklemesi (CycloneDX JSON)
+dtrack_max_upload: 20m
+# API sunucusu bellegi (Java); ss-sec'te ~11 GiB bos
+dtrack_api_memory: 4g
+# Ilk acilista veritabani semasi ve veri kaynaklari: 60 x 10 sn
+dtrack_wait_retries: 60

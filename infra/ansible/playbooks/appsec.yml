@@ -1,8 +1,9 @@
 ---
-- name: AppSec sunucusu (ss-sec) - DefectDojo, SonarQube
+- name: AppSec sunucusu (ss-sec) - DefectDojo, SonarQube, Dependency-Track
   hosts: security
   become: true
   roles:
     - appsec_host
     - defectdojo
     - sonarqube
+    - dependency_track
