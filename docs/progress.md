@@ -134,6 +134,6 @@ Notes for the next session:
 - `pods/log` is deliberately not readable (logs may contain secrets); widen only by human decision.
 - NOPASSWD sudo of `ubuntu` weakens the file-mode boundary; real control: `sudo` ask rule + human approval
   (`security-controls.md` CICD-SEC-2).
-- Open after Item 8: `k3s.yml --check --diff` (the admin kubeconfig task must show no change; not run, needs `ssh`/`sudo`
-  approval); remaining risks (same Unix user with NOPASSWD sudo, `ssh` + `sudo` to `/etc/rancher/k3s/k3s.yaml` on the
+- `k3s.yml --check --diff` after lockdown (filtered output, lessons learned #33): admin kubeconfig tasks `ok`,
+  `changed=0` on all three nodes after the check-mode fix in `install.yml`. Remaining risks (same Unix user with NOPASSWD sudo, `ssh` + `sudo` to `/etc/rancher/k3s/k3s.yaml` on the
   nodes, 12 h token renewal) in `security-controls.md` §4.

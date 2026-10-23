@@ -192,3 +192,5 @@
 - Tamamlandi: insan `kubeconfig-lockdown.sh`'i sudo ile calistirdi ve iki repoda `.claude/settings.json`'u degistirdi
   (`-o yaml/json` deny kaldirildi, `env.KUBECONFIG`, 4 deny + 2 ask). Kanit: `KUBECONFIG`'siz `kubectl auth whoami` →
   `claude-readonly`, `can-i get secrets -A` → no. Sinir metin eslestirmeden RBAC ve dosya sahipligine tasindi.
+- `k3s` rolu: gizli icerik yazan dort goreve `diff: false`; surum sorgusu check modunda da calisir (`check_mode: false`).
+  `k3s.yml --check --diff` filtreli ciktiyla: uc dugumde `changed=0`, admin kubeconfig gorevi `ok`. Ders #33.
