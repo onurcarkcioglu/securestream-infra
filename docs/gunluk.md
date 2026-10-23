@@ -107,4 +107,7 @@
 - Terraform state GitLab managed state'e tasindi (http backend, GitLab Lockbox ile sifreli). Oncesinde ansible-vault ile sifreli yedek.
   Dogrulama: 9 instance, adres + ID'ler yedekle ayni, plan exit 0. Lineage degisti: bos remote backend'e tasimada Terraform yeni lineage uretir.
   Yeni betikler: tfstate-token.sh, tfstate-migrate.sh, tfstate-verify.sh, tfstate-cleanup.sh.
+- Proxmox API TLS dogrulamasi aciktan kapaliydi (PROXMOX_VE_INSECURE=true). pve1 CA'si (SHA-256 83:0B:...:6B:92) ayri kanaldan
+  dogrulandi; scripts/tf.sh yalnizca terraform'a SSL_CERT_FILE (sistem paketi + pve CA) verir. Endpoint SAN'daki ada tasindi
+  (pve1.carkcioglu.local); ss-mgmt /etc/hosts'a elle eklendi (ss-mgmt IaC disinda, bilincli istisna). plan exit 0, yanlis CA reddedildi.
 - Gunluk basliklarindaki "Gun 2/3" etiketleri kaldirildi; yeni basliklar isi ve tarihi anlatir. Eski commit mesajlarindaki "gun" ifadeleri degistirilmedi: main korumali, gecmis yeniden yazilmaz.

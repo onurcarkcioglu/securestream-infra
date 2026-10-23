@@ -35,6 +35,7 @@ These are real incidents from the build. Each one was caught by a check, not by 
 | Assumed `ansible-vault` was on `PATH` in a non-login SSH session. | Script failed on the first command. | `export PATH=$HOME/.local/bin:$PATH` in all scripts; documented in `CLAUDE.md`. |
 | Used `wget --ca-certificate` inside a BusyBox image, which does not support it. | Pipeline job failed. | Switched to curl and added a *negative* TLS test (must fail without the CA). |
 | `kubectl exec -t` without `-i` when testing Falco's "shell in container" rule; no alert fired. | The test expected an alert and got none. | Use `-it`. A detection test must prove the detection fires. |
+| Tried to copy pve1's root CA by SSH into the hypervisor, although the task did not need root access there. | Approval prompt; the human rejected it. | CA taken only from what the network shows, plus a fingerprint the human fetched over a separate channel. No SSH into pve1 for routine work. |
 | `gitleaks --all` also scanned deleted refs and reported noise. | Unexpected findings reviewed instead of suppressed. | Scan the pipeline's own commit range. |
 
 ## Where the human was wrong — and the AI or the process caught it
@@ -56,6 +57,9 @@ Controls are only claimed after they were tested. Tests of the Claude Code setup
 | The assistant had proposed adding a `Bash(head:*secrets*)` rule | The `head` test above made it unnecessary; the rule was not added | An AI suggestion is a hypothesis until a test confirms it |
 | Dummy `.tfstate` (fake content) inside the repo: Read, `cat`, `jq`, `python3 open()` | Read, `cat`, `jq` blocked; `python3` read the file | Deny rules are not a sandbox; see lessons learned #15 |
 | Same dummy file outside the project (scratchpad) | Read, `cat`, `jq` all succeeded | Rules are scoped to the project; copies elsewhere are unprotected |
+| `git push --dry-run origin main` in auto mode (sends nothing) | Approval prompt shown: "Ask rule Bash(git push *) overrides auto mode for this command"; the human answered No and the command did not run | `ask` rules still apply in auto mode; the push decision stays with the human |
+| Proxmox root CA from the TLS chain (`openssl s_client -showcerts`) | pveproxy sends only the leaf certificate; the assistant stopped as instructed | The CA file came from the human; its SHA-256 matched the fingerprint the human read over a separate channel |
+| `scripts/tf.sh plan` with `PROXMOX_VE_INSECURE=false`; same with the lab CA in place of pve1's CA | Exit 0, no changes; with the wrong CA: `x509: certificate signed by unknown authority`, exit 1 | Verification is on and really checks the CA; registry and GitLab still reachable |
 
 ## What the AI is good at here, and what it is not
 - **Good at:** first drafts of roles, pipelines and policies; reading release notes and schemas; turning a

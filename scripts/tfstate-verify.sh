@@ -33,7 +33,7 @@ meta() { jq -r '"lineage=\(.lineage) serial=\(.serial)"'; }
 backup_state() { ansible-vault decrypt --output - "$BK" | tar -xOf - terraform.tfstate; }
 
 B_IDS=$(backup_state | ids) || fail "yedek acilamadi: $BK"
-R_IDS=$(terraform state pull | ids) || fail "GitLab state okunamadi"
+R_IDS=$("$ROOT/scripts/tf.sh" state pull | ids) || fail "GitLab state okunamadi"
 N=$(jq length <<<"$B_IDS")
 [[ $N -gt 0 ]] || fail "yedekte kaynak yok: $BK"
 if [[ $B_IDS != "$R_IDS" ]]; then
@@ -42,9 +42,9 @@ if [[ $B_IDS != "$R_IDS" ]]; then
   fail "kaynak adresleri/ID'ler tutmuyor"
 fi
 echo "Kaynaklar: $N adres+ID yedekle ayni"
-echo "Bilgi: yedek $(backup_state | meta) | GitLab $(terraform state pull | meta)"
+echo "Bilgi: yedek $(backup_state | meta) | GitLab $("$ROOT/scripts/tf.sh" state pull | meta)"
 
-set +e; terraform plan -detailed-exitcode -input=false -lock-timeout=60s; RC=$?; set -e
+set +e; "$ROOT/scripts/tf.sh" plan -detailed-exitcode -input=false -lock-timeout=60s; RC=$?; set -e
 case $RC in
   0) echo "Plan: degisiklik yok" ;;
   2) fail "plan degisiklik gosteriyor; apply YAPMAYIN" ;;

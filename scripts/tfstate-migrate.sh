@@ -58,7 +58,7 @@ verify_backup || fail "sifreli yedek acilamadi veya lineage/serial/sayi tutmuyor
 head -c 14 "$BK" | grep -q '^\$ANSIBLE_VAULT' || fail "yedek sifreli gorunmuyor: $BK"
 echo "Sifreli yedek dogrulandi: $BK (izin $(stat -c %a "$BK"))"
 
-terraform init -migrate-state   # Terraform kopyalama icin "yes" onayi ister
+"$ROOT/scripts/tf.sh" init -migrate-state   # Terraform kopyalama icin "yes" onayi ister
 
 # Backend onbelleginde token kalmamali (desen stdin'den, arguman listesine girmez)
 if grep -qFf <(printf '%s\n' "$TF_HTTP_PASSWORD") .terraform/terraform.tfstate; then
