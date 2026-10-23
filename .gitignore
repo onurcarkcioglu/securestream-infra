@@ -5,3 +5,4 @@
 *.env
 tfplan
 .claude/settings.local.json
+iac-reports/
