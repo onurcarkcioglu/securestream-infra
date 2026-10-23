@@ -48,13 +48,17 @@
     port: 6443
     timeout: 300
 
-- name: ss-mgmt'de .kube klasörü
+# Admin kubeconfig ss-mgmt'de yalnizca root'un (scripts/kubeconfig-lockdown.sh): ubuntu kullanicisinin
+# ~/.kube/config'i salt okunur claude-readonly kimligi. Admin islemleri: sudo kubectl --kubeconfig <dosya>.
+- name: ss-mgmt'de admin kubeconfig klasoru (root)
   ansible.builtin.file:
-    path: "{{ lookup('env', 'HOME') }}/.kube"
+    path: /etc/securestream
     state: directory
+    owner: root
+    group: root
     mode: "0700"
   delegate_to: localhost
-  become: false
+  become: true
 
 - name: kubeconfig'i oku
   ansible.builtin.slurp:
@@ -63,11 +67,13 @@
   no_log: true
 
 # 127.0.0.1 adresi isimle değiştirilir; sertifikada (tls-san) bu isim var.
-- name: kubeconfig'i ss-mgmt'ye yaz
+- name: Admin kubeconfig'i ss-mgmt'ye yaz (root:root 0600)
   ansible.builtin.copy:
     content: "{{ k3s_kubeconfig.content | b64decode | replace('https://127.0.0.1:6443', 'https://' ~ inventory_hostname ~ '.' ~ lab_domain ~ ':6443') }}"
-    dest: "{{ lookup('env', 'HOME') }}/.kube/config"
+    dest: /etc/securestream/admin.kubeconfig
+    owner: root
+    group: root
     mode: "0600"
   delegate_to: localhost
-  become: false
+  become: true
   no_log: true

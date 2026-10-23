@@ -1,0 +1,134 @@
+# Ansible/elle duzenleme yok: scripts/claude-readonly-rbac.sh ile uretilir (kume API kesfi).
+# AI asistani icin salt okunur kimlik. Secrets, alt kaynaklar (pods/log, pods/exec) ve
+# generators.external-secrets.io okunamaz. Token: scripts/claude-kubeconfig.sh (sureli, Secret'ta saklanmaz).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: claude-readonly
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: claude-readonly
+  namespace: claude-readonly
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: claude-readonly
+rules:
+  - apiGroups: [""]
+    resources: ["componentstatuses", "configmaps", "endpoints", "events", "limitranges", "namespaces", "nodes", "persistentvolumeclaims", "persistentvolumes", "pods", "podtemplates", "replicationcontrollers", "resourcequotas", "serviceaccounts", "services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["acme.cert-manager.io"]
+    resources: ["challenges", "orders"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["mutatingadmissionpolicies", "mutatingadmissionpolicybindings", "mutatingwebhookconfigurations", "validatingadmissionpolicies", "validatingadmissionpolicybindings", "validatingwebhookconfigurations"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apiregistration.k8s.io"]
+    resources: ["apiservices"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["controllerrevisions", "daemonsets", "deployments", "replicasets", "statefulsets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["cronjobs", "jobs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["cert-manager.io"]
+    resources: ["certificaterequests", "certificates", "clusterissuers", "issuers"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["certificates.k8s.io"]
+    resources: ["certificatesigningrequests"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["events.k8s.io"]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["external-secrets.io"]
+    resources: ["clusterexternalsecrets", "clusterpushsecrets", "clustersecretstores", "externalsecrets", "pushsecrets", "secretstores"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["flowcontrol.apiserver.k8s.io"]
+    resources: ["flowschemas", "prioritylevelconfigurations"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["frrk8s.metallb.io"]
+    resources: ["bgpsessionstates", "frrconfigurations", "frrk8sconfigurations", "frrnodestates"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["helm.cattle.io"]
+    resources: ["helmchartconfigs", "helmcharts"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["hub.traefik.io"]
+    resources: ["accesscontrolpolicies", "aiservices", "apiauths", "apibundles", "apicatalogitems", "apiplans", "apiportalauths", "apiportals", "apiratelimits", "apis", "apiversions", "contentitems", "managedapplications", "managedsubscriptions", "uplinks"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["k3s.cattle.io"]
+    resources: ["addons", "etcdsnapshotfiles"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["kyverno.io"]
+    resources: ["cleanuppolicies", "clustercleanuppolicies", "clusterpolicies", "globalcontextentries", "policies", "policyexceptions", "updaterequests"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["metallb.io"]
+    resources: ["bfdprofiles", "bgpadvertisements", "bgppeers", "communities", "configurationstates", "ipaddresspools", "l2advertisements", "servicebgpstatuses", "servicel2statuses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingressclasses", "ingresses", "ipaddresses", "networkpolicies", "servicecidrs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["node.k8s.io"]
+    resources: ["runtimeclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["policies.kyverno.io"]
+    resources: ["deletingpolicies", "generatingpolicies", "imagevalidatingpolicies", "mutatingpolicies", "namespaceddeletingpolicies", "namespacedgeneratingpolicies", "namespacedimagevalidatingpolicies", "namespacedmutatingpolicies", "namespacedvalidatingpolicies", "policyexceptions", "validatingpolicies"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["clusterrolebindings", "clusterroles", "rolebindings", "roles"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["reports.kyverno.io"]
+    resources: ["clusterephemeralreports", "ephemeralreports"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["resource.k8s.io"]
+    resources: ["deviceclasses", "resourceclaims", "resourceclaimtemplates", "resourceslices"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["scheduling.k8s.io"]
+    resources: ["priorityclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csidrivers", "csinodes", "csistoragecapacities", "storageclasses", "volumeattachments", "volumeattributesclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["traefik.io"]
+    resources: ["ingressroutes", "ingressroutetcps", "ingressrouteudps", "middlewares", "middlewaretcps", "serverstransports", "serverstransporttcps", "tlsoptions", "tlsstores", "traefikservices"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["wgpolicyk8s.io"]
+    resources: ["clusterpolicyreports", "policyreports"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: claude-readonly
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: claude-readonly
+subjects:
+  - kind: ServiceAccount
+    name: claude-readonly
+    namespace: claude-readonly
