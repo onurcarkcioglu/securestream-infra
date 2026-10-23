@@ -54,7 +54,7 @@ flowchart TB
 | ss-infra | 10.10.10.5 | `securestream.lab` DNS (dnsmasq), CA signing host |
 | ss-gitlab | 10.10.10.10 | GitLab CE 19.5.1 + container registry |
 | ss-runner | 10.10.10.11 | GitLab Runner 19.5.0, Docker executor (`privileged = false`) |
-| ss-sec | 10.10.10.12 | Reserved for SonarQube / DefectDojo (roadmap) |
+| ss-sec | 10.10.10.12 | DefectDojo (`https://defectdojo.securestream.lab`, [vulnerability management](docs/vulnerability-management.md)); SonarQube next |
 | ss-vault | 10.10.10.13 | HashiCorp Vault 2.1.2 (Raft, TLS, file audit) |
 | ss-k3s-cp / w1 / w2 | 10.10.10.20–22 | k3s v1.36.5: secrets encryption, API audit log, Traefik via MetalLB |
 

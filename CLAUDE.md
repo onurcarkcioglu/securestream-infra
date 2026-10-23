@@ -15,7 +15,7 @@ You run on **ss-mgmt (10.10.10.4)**, the bastion. All automation starts here.
 | ss-infra | 10.10.10.5 | DNS (dnsmasq) for `securestream.lab`, CA signing |
 | ss-gitlab | 10.10.10.10 | GitLab CE + registry (`ssh ubuntu@10.10.10.10 'sudo gitlab-rails runner "..."'` for admin queries) |
 | ss-runner | 10.10.10.11 | GitLab Runner (Docker executor, unprivileged) |
-| ss-sec | 10.10.10.12 | reserved: SonarQube, DefectDojo |
+| ss-sec | 10.10.10.12 | DefectDojo (Docker Compose, `/opt/defectdojo`, nginx 443); SonarQube planned |
 | ss-vault | 10.10.10.13 | HashiCorp Vault (`VAULT_ADDR=https://vault.securestream.lab:8200`) |
 | ss-k3s-cp / w1 / w2 | 10.10.10.20-22 | k3s; `kubectl` works from ss-mgmt |
 
@@ -70,5 +70,5 @@ kubectl -n catalog get pods,ingress,externalsecret
 ```
 
 ## Known gaps (roadmap)
-GitLab 2FA, central logging (Loki), Prometheus/Grafana, kube-bench/Kubescape, SonarQube, DefectDojo,
+GitLab 2FA, central logging (Loki), Prometheus/Grafana, kube-bench/Kubescape, SonarQube,
 Hadolint/Checkov/kube-linter, SLSA provenance. See `docs/security-controls.md`.

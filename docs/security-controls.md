@@ -34,7 +34,7 @@ gaps are listed openly with the planned fix. Evidence links point to the build l
 | **PW.8** Test executable code | Unit tests that encode security requirements (input validation, security headers, auth); OWASP ZAP API scan after deploy |
 | **PW.9** Secure-by-default settings | Swagger UI off, security headers on, pod hardening enforced by Pod Security `restricted`; Helm chart scanned by Checkov (`checkov-helm`), renders only by image digest |
 | **RV.1** Identify vulnerabilities continuously | Trivy on every build; Falco at runtime · **Gap:** continuous SBOM monitoring (Dependency-Track) |
-| **RV.2** Assess and remediate | ZAP findings (3 warnings) fixed in code, locked by a test, re-scanned to 0 |
+| **RV.2** Assess and remediate | DefectDojo register (`defectdojo-upload`): every `main` pipeline reimports all scanner reports; SLA Critical 7 / High 30 / Medium 90 / Low 180 days; prioritisation severity × exploitability × exposure ([vulnerability-management](vulnerability-management.md)). ZAP findings (3 warnings) fixed in code, locked by a test, re-scanned to 0 |
 | **RV.3** Analyse root causes | Each incident has a root-cause entry in [lessons-learned](lessons-learned.md) |
 
 ## 3. SLSA (v1.0, Build track)
@@ -67,7 +67,13 @@ Honest position: the signing and SBOM pieces are in place; formal SLSA Build L2 
 Findings that cannot be fixed are recorded in `security/exceptions.yaml` of the scanned repository (`id, tool, rule,
 path, reason, owner, created, expires`, at most 90 days), never as inline suppressions. Checkov runs in report mode
 and `scripts/scan-gate.py` decides: a finding passes only with a matching, unexpired exception; a report with zero
-checks fails. Current: catalog-api `EXC-0001` (CKV_K8S_21, render-time namespace, expires 2027-01-21).
+checks fails. Current: catalog-api `EXC-0001` (CKV_K8S_21, render-time namespace, expires 2027-01-21); platform
+`EXC-0101`, `EXC-0102` (cloud samples, expire 2027-01-21).
+
+The CI job `exceptions-check` (`scripts/exceptions-check.py`) validates the whole file on every pipeline: schema,
+unique `EXC-NNNN` ids, known tool, at most 90 days, not expired (fails), WARN 14 days before expiry. The same entries
+are mirrored to DefectDojo as time-boxed Risk Acceptances (`<product>:<id>`) by `defectdojo-upload`; DefectDojo
+reactivates the findings when they expire. Process and roles: [vulnerability-management](vulnerability-management.md).
 
 ## 6. Secrets lifecycle
 
@@ -79,5 +85,7 @@ checks fails. Current: catalog-api `EXC-0001` (CKV_K8S_21, render-time namespace
 | GitLab runner token | GitLab API → `ansible-vault encrypt_string` | Ansible Vault | Runner `config.toml` (mode 0600, `no_log`) | Re-register runner |
 | Registry deploy token | GitLab service → Kubernetes secret via pipe | Kubernetes secrets (`catalog`, `kyverno`) | kubelet image pulls, Kyverno | 1-year expiry |
 | CI deploy kubeconfig | Built in RAM from a service-account token | GitLab protected/hidden variable | `deploy` job | Delete token secret → new token |
+| DefectDojo service secrets (Django secret key, AES key, PostgreSQL, admin, Jira webhook) | `openssl rand` piped into `ansible-vault encrypt_string` | `group_vars/security/vault.yml` | 0600 root env files on ss-sec; the admin password only reaches the one-shot initializer (unset, DefectDojo would generate one and print it to the container log) | Re-generate + `appsec.yml` (DB password needs a PostgreSQL `ALTER ROLE` too) |
+| DefectDojo CI API key (`DD_API_KEY`) | Django `Token` for user `gitlab-ci` (no usable password, not staff, `authorized_users` of the two products), piped by `scripts/defectdojo-ci-token.sh` straight into GitLab | GitLab group variable, protected + masked + hidden | `defectdojo-upload` jobs on `main` | All DefectDojo API tokens expire after 90 days; rerun the script (old token is deleted) |
 | GitHub mirror token | GitHub UI → `read -rs` → GitLab (encrypted) | GitLab push-mirror config | Push mirror | 90-day expiry (next: 2027-01-20) |
 | Terraform state | `terraform apply` on ss-mgmt | GitLab managed Terraform state (project 1, state `proxmox`): encrypted by GitLab with Lockbox (key derived from `db_key_base` + project ID), locked and versioned. Pre-migration copy: `ansible-vault` encrypted backup in `~/.config/securestream/` (mode `0600`). Local plain-text leftovers removed with `scripts/tfstate-cleanup.sh` | `terraform plan/apply` via http backend (`backend.tf`); project access token in `~/.config/securestream/tfstate.env` (`0600`) | Done (migrated 2026-10-23; 9 instances, addresses + IDs match the backup, `plan` exit 0). Token expires in <= 1 year: renew with `scripts/tfstate-token.sh`. A rebuild from zero starts on a local backend, because GitLab is created by this Terraform |

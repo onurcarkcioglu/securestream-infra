@@ -146,3 +146,15 @@
   `git push * :**`, `git branch -D *`. Zararsiz dry-run testleri: hepsi engellendi (`ai-assisted-engineering.md`, verification log).
 - Istenen `git push * :*` kurali calismadi: sondaki `:*` Claude Code'da eski onek sozdizimi. `:**` ile degistirildi.
 - Asil kontrol sunucu tarafinda: korumali dallar ve rol yetkileri (lessons learned #23).
+
+## DefectDojo ve zafiyet yonetimi (2026-10-23)
+- ss-sec: `playbooks/appsec.yml`, roller `appsec_host` (docker.io + compose v2 sabit, nginx yalnizca 443, TLS 1.2/1.3,
+  bilinmeyen SNI reddedilir) ve `defectdojo` (3.3.300, resmi compose uyarlamasi, imajlar digest ile).
+- DNS: `defectdojo.securestream.lab`. Sertifika `lab_cert` ile; rol yeni sunucuda check modunda temiz bitiyor.
+- Gizli degerler pipe ile ansible-vault'a (`group_vars/security/vault.yml`); admin sifresi yalnizca initializer'da.
+- API token'lari 90 gun; sifreyle token alma ucu (`api-token-auth`) kapali.
+- Yapi (API, idempotent): SLA SecureStream 7/30/90/180, urunler catalog-api ve securestream-platform, engagement CI/CD,
+  CI kullanicisi gitlab-ci (staff degil, sifresi kullanilamaz, authorized_users). DefectDojo 3.x OSS'te RBAC yok.
+- CI: `exceptions-check` (iki repo), `defectdojo-upload` (main, when: always). catalog-api: trivy fs/image JSON
+  ve ZAP XML raporlari eklendi. Istisnalar Risk Acceptance olarak aynalaniyor.
+- `docs/vulnerability-management.md`.
