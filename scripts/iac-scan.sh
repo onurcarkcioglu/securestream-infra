@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Terraform IaC taramasi (Checkov). Yerelde ve CI'da ayni betik.
 #   scripts/iac-scan.sh gate     infra/terraform altindaki her modul (samples/*/insecure haric) ayri taranir;
-#                                her rapor scripts/scan-gate.py'den gecer (istisnalar: security/exceptions.yaml).
+#                                her rapor scan-gate.py'den gecer (ci-templates; istisnalar: security/exceptions.yaml).
 #   scripts/iac-scan.sh report   samples/*/insecure taranir, yakalanan kurallar listelenir; kapi degil, exit 0.
 # Her dizin ayri calistirilir: Checkov 3.3.26'da Terraform icin --skip-path gecersiz regex uretiyor
 # (module_finder.py: '|'.join(f"({excluded_paths})")) ve birden fazla -d ayni dizini tekrar tekrar tariyor.
@@ -34,11 +34,14 @@ mapfile -t DIRS < <(modules "$MODE")
 (( ${#DIRS[@]} > 0 )) || fail "taranacak Terraform dizini bulunamadi"
 
 if [[ $MODE == gate ]]; then
+  # scan-gate.py tek kaynak: securestream/ci-templates (CI: ss-tools -> .ss-tools/). Yerelde: SCAN_GATE=<yol>
+  GATE=${SCAN_GATE:-.ss-tools/scan-gate.py}
+  [[ -f $GATE ]] || fail "scan-gate.py yok: $GATE (CI'da ss-tools, yerelde SCAN_GATE=~/ci-templates/scripts/scan-gate.py)"
   RC=0
   for d in "${DIRS[@]}"; do
     echo "== $d"
     report=$(scan "$d")
-    "$PYTHON" scripts/scan-gate.py --tool checkov --report "$report" --base "$d" || RC=1
+    "$PYTHON" "$GATE" --tool checkov --report "$report" --base "$d" || RC=1
   done
   (( RC == 0 )) && echo "iac-scan: ${#DIRS[@]} dizin, kapi gecti" || echo "iac-scan: kapi KALDI"
   exit "$RC"

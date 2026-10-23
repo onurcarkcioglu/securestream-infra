@@ -1,4 +1,5 @@
-# securestream-infra pipeline
+# securestream-infra pipeline. Ortak isler ve tum imaj digest'leri securestream/ci-templates'ten (tag; SS_CI_REF
+# ayni tag, YAML anchor). Betikler (scan-gate, exceptions-check, defectdojo-upload) ss-tools ile ayni tag'den.
 # - secret-scan:    sir yollarindaki dosyalar sifreli mi + bu commit'in tum gecmisi gitleaks ile (kapi).
 # - iac-scan:       infra/terraform (samples/*/insecure haric) Checkov + ozel kurallar; istisnasiz bulgu durdurur.
 # - iac-scan-insecure: kasitli guvensiz bulut ornekleri; yakalanan kurallari listeler, kapi degil.
@@ -10,70 +11,49 @@ workflow:
   rules:
     - if: $CI_COMMIT_BRANCH
 
-stages: [scan, publish, report]
+stages: [test, scan, publish, report]
+
+include:
+  - project: securestream/ci-templates
+    ref: &ss_ci_ref v1.0.0-rc.2
+    file:
+      - templates/secret-scan.yml
+      - templates/iac-scan.yml
+      - templates/exceptions-check.yml
+      - templates/defectdojo-upload.yml
 
 variables:
-  GITLEAKS_IMAGE: "ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f"
-  # catalog-api ile ayni digest (bridgecrew/checkov:3.3.26)
-  CHECKOV_IMAGE: "bridgecrew/checkov:3.3.26@sha256:8e63f217cb084f1c1a067326a9cf6e37d54bdc82e5822210d50ca4e2f647dd93"
-  # catalog-api ile ayni digest (python:3.12-slim)
-  PYTHON_IMAGE: "python:3.12-slim@sha256:cb33f7f771ecec2ef1225cf39b159591a040391bd73e4c01f00fdfc4c47611d2"
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-  DD_URL: "https://defectdojo.securestream.lab"
+  SS_CI_REF: *ss_ci_ref
+  DD_PRODUCT: securestream-platform
   GITHUB_USER: "onurcarkcioglu"
 
 default:
   tags: [docker]
 
+# Sablondaki secret-scan + bu depoya ozel on kontrol
 secret-scan:
-  stage: scan
-  image:
-    name: $GITLEAKS_IMAGE
-    entrypoint: [""]
-  variables:
-    GIT_DEPTH: "0"
-    GIT_STRATEGY: clone
-  script:
+  before_script:
     # Sir yollarindaki her dosya Ansible Vault ile sifreli olmali (yalnizca baslik okunur, icerik basilmaz).
     - sh scripts/check-vault-encrypted.sh
-    # Kapi: bulgu pipeline'i durdurur. Sifreli vault dosyalari icin allowlist yok; bugune kadar bulgu
-    # vermediler. Gercek bir yanlis pozitif cikarsa .gitleaks.toml'a kanitla ve yalnizca o yol eklenir.
-    - gitleaks git --log-opts="$CI_COMMIT_SHA" --redact .
 
-.checkov:
-  stage: scan
-  needs: []
-  image:
-    name: $CHECKOV_IMAGE
-    entrypoint: [""]
+.checkov-tf:
+  extends: .ss-checkov
   artifacts:
     when: always
     paths: [iac-reports/]
     expire_in: 30 days
 
 iac-scan:
-  extends: .checkov
+  extends: .checkov-tf
   script:
     # Checkov rapor modunda; karari scan-gate.py verir (istisnasiz bulgu, bos rapor -> kirmizi).
     - bash scripts/iac-scan.sh gate
 
 iac-scan-insecure:
-  extends: .checkov
+  extends: .checkov-tf
   script:
     # Kapi degil: guvensiz ornekler tarayicinin neyi yakaladigini gosterir; betik her zaman exit 0.
     - bash scripts/iac-scan.sh report
-
-exceptions-check:
-  stage: scan
-  needs: []
-  image: $PYTHON_IMAGE
-  cache:
-    key:
-      files: [requirements-ci.txt]
-    paths: [.cache/pip]
-  script:
-    - pip install -q --require-hashes -r requirements-ci.txt
-    - python3 scripts/exceptions-check.py
 
 publish-github:
   stage: publish
@@ -104,29 +84,3 @@ publish-github:
       gitleaks git --redact .
       git push -q "https://${GITHUB_USER}:${GITHUB_MIRROR_TOKEN}@github.com/${GITHUB_USER}/securestream-infra.git" HEAD:refs/heads/main
       echo "GitHub'a yayinlandi: $(git rev-parse --short HEAD) ($(git rev-list --count HEAD) commit)"
-
-defectdojo-upload:
-  stage: report
-  image: $PYTHON_IMAGE
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      when: always
-  needs:
-    - { job: iac-scan, artifacts: true, optional: true }
-  cache:
-    key:
-      files: [requirements-ci.txt]
-    paths: [.cache/pip]
-  script:
-    # Yalnizca kapi raporlari (iac-scan); kasitli guvensiz ornekler DefectDojo'ya girmez.
-    - pip install -q --require-hashes -r requirements-ci.txt
-    - |
-      set -eu
-      ARGS=""
-      for f in iac-reports/*.json; do
-        [ -e "$f" ] || continue
-        name=$(basename "$f" .json)
-        # Checkov yollari taranan modul dizinine gore (/main.tf): BASE = rapor adindan dizin
-        ARGS="$ARGS --report checkov-$name=$f@$(echo "$name" | tr _ /)"
-      done
-      python3 scripts/defectdojo-upload.py --url "$DD_URL" --product securestream-platform $ARGS
