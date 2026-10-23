@@ -177,3 +177,15 @@
   Negatif test: TLSv1 + CERT_NONE yardimci fonksiyonu → `new_vulnerabilities=3`, kapi kirmizi; geri alininca yesil.
 - Community Build sinirlari: yalnizca ana dal analiz edilir, dal/MR analizi yok; `SONAR_TOKEN` protected oldugu icin
   is de yalnizca main'de calisir.
+
+## AI asistani icin salt okunur kubeconfig (2026-10-23, kismen)
+- `platform/manifests/claude-readonly-rbac.yaml` (kumeye uygulandi): namespace + SA `claude-readonly`, ClusterRole
+  yalnizca get/list/watch; 33 API grubu acikca listeli, secrets / alt kaynaklar / ESO generator'lari yok.
+  Uretici: `scripts/claude-readonly-rbac.sh` (`--check` sapmada exit 1, negatif test yapildi).
+- `scripts/claude-kubeconfig.sh`: TokenRequest ile 12 saatlik token, `~/.kube/claude-readonly.yaml` (0600);
+  can-i 13/13. Gercek istek: get pods OK, logs/exec Forbidden.
+- Bulgu: `KUBECONFIG`'siz kubectl hala `system:admin`. `Read(~/.kube/**)` kubectl'i durdurmuyor. Deny kurallari
+  kalmaya devam ediyor.
+- `scripts/kubeconfig-lockdown.sh` (insan, sudo ile): admin kubeconfig `/etc/securestream/admin.kubeconfig`
+  (root:root 0600), `~/.kube/config` → `claude-readonly.yaml`. `k3s` rolu admin dosyasini artik oraya yaziyor.
+- Yol haritasi: asistan icin ayri Unix kullanicisi.

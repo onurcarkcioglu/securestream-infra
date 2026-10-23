@@ -39,6 +39,11 @@ Lab CA: `infra/ansible/files/securestream-root-ca.crt` (use it as `--cacert` / `
    kubectl reads the kubeconfig itself, so file deny rules do not cover it: never `kubectl get/describe secret`,
    never `-o yaml` / `-o json` (they dump Secret data and env values). Use `-o wide` or `-o jsonpath=` for the
    specific non-secret fields you need.
+   **kubectl identity:** the assistant uses kubectl only as `claude-readonly` (`~/.kube/config` →
+   `~/.kube/claude-readonly.yaml` after `scripts/kubeconfig-lockdown.sh`; read-only RBAC, no secrets, no logs/exec).
+   Never use `/etc/securestream/admin.kubeconfig`, `--kubeconfig`, `--context`, `--token` or `KUBECONFIG=`. Cluster
+   changes (`kubectl apply`, `helm`, `platform/install.sh`) are run by the human with `sudo … --kubeconfig
+   /etc/securestream/admin.kubeconfig`. Token renewal (12 h): the human runs `sudo scripts/claude-kubeconfig.sh`.
 2. **Secrets move only through stdin pipes** (`… | ansible-vault encrypt_string --stdin-name …`, `vault kv put key=-`,
    `printf %s "$X" | ssh … runner`). Never as command-line arguments, never into repository files, never into chat.
    When a human must enter a token, give them a `read -rsp` prompt with a format check; never ask them to paste it to you.
@@ -70,5 +75,6 @@ kubectl -n catalog get pods,ingress,externalsecret
 ```
 
 ## Known gaps (roadmap)
-GitLab 2FA, central logging (Loki), Prometheus/Grafana, kube-bench/Kubescape,
+GitLab 2FA, central logging (Loki), Prometheus/Grafana, kube-bench/Kubescape, a separate Unix user for the AI
+assistant (only the read-only kubeconfig, no sudo),
 Hadolint/Checkov/kube-linter, SLSA provenance. See `docs/security-controls.md`.

@@ -107,4 +107,27 @@ Notes for the next session:
 - SonarQube findings are not imported into DefectDojo (not in Item 5's list); roadmap.
 - Observation: `defectdojo-upload` updates the Risk Acceptance `catalog-api:EXC-0001` (`accepted_findings`,
   `expiration_date`) on every run; harmless, not idempotent. Not fixed yet.
-- Remote branches `ci/sonarqube`, `docs/sonarqube` (catalog-api): merged, left for the human to delete.
+- Remote branch `ci/sonarqube` (catalog-api): merged, left for the human to delete (`docs/sonarqube` is local only).
+
+| 8 Read-only kubeconfig | **Partial** (lockdown by the human pending) | this docs commit (RBAC, scripts, `k3s` role, docs) | RBAC applied (33 API groups, no secrets/subresources/ESO generators); `claude-kubeconfig.sh`: token length 981, expiry 12 h, `can-i` 13/13 as expected; real requests: get pods OK, logs + exec Forbidden; `claude-readonly-rbac.sh --check` exit 1 on a modified manifest. **Not yet a boundary:** plain `kubectl auth whoami` → `system:admin`, `can-i get secrets -A` → yes (admin kubeconfig still in `~/.kube/config`) |
+
+### Item 8 notes (2026-10-23)
+
+- Human decision: deny rules (`kubectl * -o yaml*`, `-o json*`) stay until plain `kubectl auth whoami` shows
+  `claude-readonly`. The assistant's own edit of `.claude/settings.json` was refused by the auto-mode classifier
+  ("Self-Modification"); the human makes the settings changes. Lessons learned #31.
+- Human runs `sudo ~/securestream/scripts/kubeconfig-lockdown.sh` (option 1). Option 2, a separate Unix user for the
+  assistant, is on the roadmap (`CLAUDE.md`, `security-controls.md` §4).
+- Uses of the admin kubeconfig on ss-mgmt (inventory before lockdown):
+  - `infra/ansible/roles/k3s/tasks/server.yml` wrote it to `~/.kube/config`; now `/etc/securestream/admin.kubeconfig`
+    (root:root 0600, `become: true`). After lockdown: `k3s.yml --check --diff` must show no change for that task.
+  - `platform/install.sh` (helm + kubectl, default kubeconfig): run as root with
+    `sudo KUBECONFIG=/etc/securestream/admin.kubeconfig platform/install.sh`; root needs its own `helm repo add`.
+  - `scripts/claude-kubeconfig.sh`: default admin file `/etc/securestream/admin.kubeconfig`, run with `sudo`.
+  - `scripts/claude-readonly-rbac.sh`: discovery only, works with the read-only identity; applying its output is admin.
+  - Interactive `kubectl`/`helm` of the human: read-only after lockdown; admin via `sudo … --kubeconfig …`.
+  - Not affected: catalog-api `deploy` (own `KUBECONFIG_B64`), crontab (no kubectl), GitLab CI of this repository.
+  - Item 7 (Kubescape) and Item 9 (Helm installs) need the admin kubeconfig: run by the human.
+- `pods/log` is deliberately not readable (logs may contain secrets); widen only by human decision.
+- NOPASSWD sudo of `ubuntu` weakens the file-mode boundary; real control: `sudo` ask rule + human approval
+  (`security-controls.md` CICD-SEC-2).

@@ -49,6 +49,7 @@ These are real incidents from the build. Each one was caught by a check, not by 
 | SonarQube bootstrap removed global `provisioning` from *every* group, including `sonar-administrators`; afterwards the admin could no longer create a project (`Insufficient privileges`). | The first local verification scan failed with HTTP 403 before any analysis. | Administrators keep provisioning (SonarQube default, restored by the bootstrap); only non-admin groups lose `scan`/`provisioning`. Restrict the least-privileged group, not the one that runs the tool. |
 | The first `sonarqube-local-scan.sh` reported "Quality Gate failed" when the token could not even be created (`set -e` exit 1 looked like the scanner's gate failure, exit 1). | Reading the output: the 403 line came before any analysis. | Result is taken from the scanner's `QUALITY GATE STATUS` line; every other failure exits 2 ("scan did not run", `trap 'exit 2' ERR`). Verified: the next setup error was reported as exit 2. |
 | Checked the SonarQube new-code period with `/api/new_code_periods/show` (project level); Community Build stores it on the `main` branch, so every run "changed" it again. | The mandatory second Ansible run showed `changed=1`. | Compare with `/api/new_code_periods/list` (branch level). |
+| Planned to enforce the read-only kubeconfig with `env.KUBECONFIG` and text deny rules, and to remove the `-o yaml/json` deny rules after `can-i` tests run *with that file*. The plain `kubectl` still used the admin kubeconfig. | The human asked for proof first; `kubectl auth whoami` without `KUBECONFIG` → `system:admin`. Independently, Claude Code's auto-mode classifier refused the assistant's edit of its own `settings.json` ("Self-Modification"). | Deny rules stay; admin kubeconfig moves out of the user's reach (`kubeconfig-lockdown.sh`, run by the human); permission changes are made by the human (lessons learned #31). The `can-i` tests proved what the read-only *identity* may do, not which identity the assistant *uses*. |
 | `gitleaks --all` also scanned deleted refs and reported noise. | Unexpected findings reviewed instead of suppressed. | Scan the pipeline's own commit range. |
 
 ## Where the human was wrong — and the AI or the process caught it
@@ -71,6 +72,8 @@ Controls are only claimed after they were tested. Tests of the Claude Code setup
 | Dummy `.tfstate` (fake content) inside the repo: Read, `cat`, `jq`, `python3 open()` | Read, `cat`, `jq` blocked; `python3` read the file | Deny rules are not a sandbox; see lessons learned #15 |
 | Same dummy file outside the project (scratchpad) | Read, `cat`, `jq` all succeeded | Rules are scoped to the project; copies elsewhere are unprotected |
 | `git push --dry-run origin main` in auto mode (sends nothing) | Approval prompt shown: "Ask rule Bash(git push *) overrides auto mode for this command"; the human answered No and the command did not run | `ask` rules still apply in auto mode; the push decision stays with the human |
+| Plain `kubectl auth whoami` / `can-i get secrets -A` (no `KUBECONFIG`) while `Read(~/.kube/**)` was denied and `~/.kube/claude-readonly.yaml` existed, 2026-10-23 | `system:admin`, groups `system:masters`; `yes` | A file deny rule does not stop a program that opens the file itself; the RBAC boundary needs the admin credential out of the user's reach (lessons learned #31) |
+| Assistant edits its own `.claude/settings.json` (add `env.KUBECONFIG`, remove deny rules) in auto mode | Refused by the auto-mode classifier ("Self-Modification") | Permission changes stay with the human |
 | Proxmox root CA from the TLS chain (`openssl s_client -showcerts`) | pveproxy sends only the leaf certificate; the assistant stopped as instructed | The CA file came from the human; its SHA-256 matched the fingerprint the human read over a separate channel |
 | `scripts/tf.sh plan` with `PROXMOX_VE_INSECURE=false`; same with the lab CA in place of pve1's CA | Exit 0, no changes; with the wrong CA: `x509: certificate signed by unknown authority`, exit 1 | Verification is on and really checks the CA; registry and GitLab still reachable |
 | `sudo -n true` in auto mode, after adding ask rule `Bash(sudo *)` (ss-mgmt has passwordless sudo; before the rule, sudo ran without a prompt) | Approval prompt shown: "Ask rule Bash(sudo *) overrides auto mode"; the human answered No and the command did not run | Root on the bastion now needs a human yes per command; the NOPASSWD risk itself remains (see security-controls) |
@@ -90,6 +93,24 @@ Controls are only claimed after they were tested. Tests of the Claude Code setup
 | Same command after changing the rule to `Bash(git push * :**)` (no trailing `:*`) | Blocked without a prompt | Deviation from the requested rule text, recorded in `docs/progress.md`; same rule in both repositories |
 | `git push --dry-run origin -d yok-boyle-bir-dal`; `git branch -D yok-boyle-bir-dal` | Both blocked without a prompt | Short `-d` and forced local deletion are covered. Still only text matching (an alias or `git -C . push …` is not covered); the real limit is server-side (lessons learned #23) |
 | `kubectl get pod … -o jsonpath=…` together with `kubectl exec` (to check a mounted file's permissions) | Denied | `exec` into a running pod was rightly refused; diagnosis continued from the chart instead. Note: the deny rule `Bash(kubectl * -o json*)` also matches `-o jsonpath=`, which `CLAUDE.md` recommends; needs a decision by the human, not a workaround |
+
+## Cluster access: a boundary enforced by RBAC, not by matching command text
+Claude Code deny rules match command text (`kubectl get secret*`, `-o json*`); they are a guardrail and can be
+bypassed by another spelling, a script or another program (lessons learned #15, #23). The assistant therefore gets
+its own Kubernetes identity, and the API server decides:
+
+- ServiceAccount `claude-readonly`: get/list/watch on explicitly listed resources, generated from API discovery
+  (`scripts/claude-readonly-rbac.sh`, `--check` reports drift). Not listed: `secrets`, every subresource
+  (`pods/log`, `pods/exec`, `serviceaccounts/token`), `generators.external-secrets.io`.
+- Token: TokenRequest, 12 hours, not stored in a Secret; minted by the human (`sudo scripts/claude-kubeconfig.sh`),
+  never shown (length and expiry only).
+- Proof: `can-i` 13/13; real requests: `get pods` works, `logs` and `exec` are Forbidden.
+- The identity is only the boundary if the assistant cannot reach any other credential. On 2026-10-23 its plain
+  `kubectl` was still `system:admin` (lessons learned #31). `scripts/kubeconfig-lockdown.sh` moves the admin
+  kubeconfig to `root:root 0600`; after that the remaining path is `sudo`, which is an ask rule with human approval
+  (NOPASSWD sudo is a known risk). Next step on the roadmap: a separate Unix user for the assistant.
+- Only after `kubectl auth whoami` (no `KUBECONFIG`) shows `claude-readonly` are the text rules `-o yaml/json`
+  removed, by the human.
 
 ## What the AI is good at here, and what it is not
 - **Good at:** first drafts of roles, pipelines and policies; reading release notes and schemas; turning a
