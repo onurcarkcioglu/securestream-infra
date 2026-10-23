@@ -226,3 +226,14 @@
   `Bash(kubectl * get secret*)` / `Bash(kubectl * describe secret*)`. Zararsiz testler: ikisi de engellendi.
 - `docs/ai-guardrails.md`: alti katman (metin kurallari, auto-mode siniflandiricisi, insan onayi, RBAC, dosya sahipligi,
   CI kapilari), her biri icin durdurdugu/durduramadigi ve kanit; olay tablosu, kalan riskler, yol haritasi.
+
+## Izleme, Dependency-Track ve Argo CD (2026-10-23)
+- Item 9 (`e79cbf8`): kube-prometheus-stack 92.2.0, Loki 7.3.0 tek ikili, Alloy 1.13.1, Falcosidekick -> Loki;
+  Grafana `grafana.securestream.lab` (TLS, sifre kume icinde ESO Password generator). Dashboard "SecureStream
+  Security". Kurulum insan: `platform/install-monitoring.sh`; kanit: `scripts/monitoring-falco-check.sh`.
+- Dependency-Track 4.14.5 (`e88c6ca`): ss-sec'te Ansible rolu, nginx TLS, admin sifresi vault'tan, CI takimi en az
+  yetkiyle, varsayilan Automation takimi silindi. `appsec.yml` ikinci calisma `changed=0`. ci-templates `v1.1.0`:
+  `dependency-track-upload`; catalog-api `2a08712`.
+- Argo CD 10.10.2 (`4dfddc5`): platform manifest'leri, elle senkronizasyon, GitLab deploy token pipe ile Secret'a.
+  Kurulum insan: `platform/install-argocd.sh`.
+- DNS: `grafana`, `argocd` -> 10.10.10.100 (infra.yml, ikinci calisma `changed=0`).

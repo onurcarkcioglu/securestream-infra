@@ -332,3 +332,24 @@ Next for the human:
 4. Decide on the High fixes (Falco `leastPrivileged`, Kyverno read-only CA, platform limits); they need Helm with
    the admin kubeconfig. Re-scan after each.
 5. Read-only token renewal before 2026-10-24 05:14 UTC (`sudo ~/securestream/scripts/claude-kubeconfig.sh`).
+
+## Items 9 and 10 (human request: add them now and finish)
+
+| Item | Status | Commit | Evidence |
+|---|---|---|---|
+| 9 Monitoring and security dashboard | Prepared; install by the human | `e79cbf8` | Charts pinned (kube-prometheus-stack 92.2.0, Loki 7.3.0, Alloy 1.13.1; Falco 9.2.1 + Falcosidekick), all rendered locally with the values (Kubernetes 1.36.5). DNS `grafana`, `argocd` → 10.10.10.100 (`infra.yml` apply, second run `changed=0`, `dig` OK). Grafana admin password generated in the cluster (ESO `Password`, `CreatedOnce`). Install: `sudo KUBECONFIG=/etc/securestream/admin.kubeconfig platform/install-monitoring.sh`; evidence: `scripts/monitoring-falco-check.sh` |
+| 10a Dependency-Track | Done | `e88c6ca`; ci-templates `ae193ad`, `bc5b061` (tag `v1.1.0`); catalog-api `2a08712` | `appsec.yml` second run `changed=0`; bootstrap: admin password replaced, team `gitlab-ci` (3 permissions), default Automation team removed. Tests: `/api/version` 4.14.5 over TLS, frontend 200, anonymous API 401, `admin/admin` 401, public CA → curl exit 60, 8081/8082/5432/80 closed from outside; container log: 1 match for "password" = audit line "password changed" (no value). `DTRACK_API_KEY` length 45, `odt_`, protected/masked/hidden. CI lint dry run (`main`): valid, 17 jobs. ci-templates pipelines 84, 85. catalog-api pipeline 87 (`main`) 17/17 green: `dependency-track-upload` uploaded `sbom.cdx.json` (105 components) as `catalog-api main`, processed. securestream pipeline 88 green |
+| 10b Argo CD | Prepared; install by the human | `4dfddc5` | Chart 10.10.2 rendered (ingress TLS `argocd-server-tls`, lab CA for GitLab, `server.insecure` behind Traefik). Install: `platform/install-argocd.sh` (without sudo; deploy token piped into a Secret) |
+
+### Notes (Items 9 and 10, 2026-10-23)
+
+- Deviation: started after 23:30 TSİ on the human's explicit request.
+- Deviation: Dependency-Track 4.14.5, not 5.x (5.x is a different architecture; 4.14.5 is older than two weeks).
+- Deviation: Grafana admin password from an in-cluster ESO generator instead of Vault: the assistant has no Vault
+  token by design and a Vault policy change is a human operation; the value never leaves the cluster.
+- Deviation: catalog-api request/error rate from Traefik metrics, not from the app's `/metrics` (NetworkPolicy).
+- Mistake caught by the first apply: `dtrack-admin.py` sent `Accept: application/json` to the login endpoint,
+  which answers `text/plain` → HTTP 406; fixed before any state was changed.
+- After the installs: `claude-readonly` cannot read the new CRDs (`monitoring.coreos.com`, `argoproj.io`);
+  regenerate with `scripts/claude-readonly-rbac.sh` and apply (human) if the assistant should see them.
+- securestream still includes ci-templates `v1.0.0` (no Dependency-Track job there; no container image).

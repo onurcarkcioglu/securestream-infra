@@ -70,6 +70,7 @@ flowchart TB
 | Workload | Pod Security `restricted`, non-root, read-only rootfs, no capabilities, NetworkPolicy with **no egress** | `kubectl auth can-i` and network tests in the docs |
 | Secrets | Vault (Shamir 5/3), External Secrets with Kubernetes auth (no static token), Ansible Vault, protected+masked+hidden CI variables | Root token revoked after setup; values never printed |
 | Runtime | Falco (modern eBPF) | Shell in a container → alert with pod and namespace |
+| Monitoring | Prometheus, Grafana ("SecureStream Security"), Loki, Falcosidekick; Dependency-Track for released SBOMs; Argo CD shows drift of platform manifests (manual sync) | [requirements traceability](docs/requirements-traceability.md) §7 |
 | Posture | Kubescape (NSA, MITRE) with the assistant's read-only identity, sanitized report into DefectDojo (`scripts/kubescape-scan.sh`) | Compliance 64.3, 0 Critical; High findings assessed in [security-controls](docs/security-controls.md) §4 |
 | Testing the controls | Every gate was broken on purpose and verified to fail **for the right reason** | [lessons-learned](docs/lessons-learned.md) |
 
