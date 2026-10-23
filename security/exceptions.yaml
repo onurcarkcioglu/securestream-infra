@@ -23,3 +23,14 @@ exceptions:
     owner: platform-security
     created: 2026-10-23
     expires: 2027-01-21
+  - id: EXC-0103
+    tool: kubescape
+    rule: C-0012
+    path: apps/v1/metallb-system/Deployment/metallb-controller
+    reason: >-
+      False positive: the flagged variable METALLB_ML_SECRET_NAME holds the name of the memberlist Secret
+      (upstream MetalLB chart, value checked by length only: 18 characters, a plain value, no valueFrom), not a
+      credential. Kubescape matches the word SECRET in the variable name.
+    owner: platform-security
+    created: 2026-10-23
+    expires: 2027-01-21
