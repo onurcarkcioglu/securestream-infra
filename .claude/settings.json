@@ -19,7 +19,12 @@
       "Bash(git push *-f)",
       "Bash(git push *+*)",
       "Bash(terraform destroy *)",
-      "Bash(*tf.sh destroy*)"
+      "Bash(*tf.sh destroy*)",
+      "Bash(kubectl get secret*)",
+      "Bash(kubectl get secrets*)",
+      "Bash(kubectl describe secret*)",
+      "Bash(kubectl * -o yaml*)",
+      "Bash(kubectl * -o json*)"
     ],
     "ask": [
       "Bash(git push *)",

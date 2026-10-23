@@ -36,6 +36,9 @@ Lab CA: `infra/ansible/files/securestream-root-ca.crt` (use it as `--cacert` / `
 1. **Never read, print, copy or summarise secret values.** This includes `~/.config/securestream/`,
    `infra/ansible/secrets/`, `infra/ansible/inventory/group_vars/*/vault.yml`, kubeconfigs, tokens, keys and
    `vault kv get` output. Verify a secret only by length or prefix.
+   kubectl reads the kubeconfig itself, so file deny rules do not cover it: never `kubectl get/describe secret`,
+   never `-o yaml` / `-o json` (they dump Secret data and env values). Use `-o wide` or `-o jsonpath=` for the
+   specific non-secret fields you need.
 2. **Secrets move only through stdin pipes** (`… | ansible-vault encrypt_string --stdin-name …`, `vault kv put key=-`,
    `printf %s "$X" | ssh … runner`). Never as command-line arguments, never into repository files, never into chat.
    When a human must enter a token, give them a `read -rsp` prompt with a format check; never ask them to paste it to you.
