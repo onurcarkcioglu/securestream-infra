@@ -116,3 +116,9 @@
 - `docs/gunluk.md` -> `docs/engineering-log.md` (`git mv`, gecmis korunur); README ve CLAUDE.md referanslari guncellendi.
 - `ai-assisted-engineering.md`: "Interview summary" bolumu "Summary" oldu. Kisisel e-posta adresi kayittan cikarildi.
   Yayinlanmis Git gecmisi yeniden yazilmadi.
+
+## Salt okunur CI durum betigi (2026-10-23)
+- `scripts/ci-status.sh <grup/proje> [is] [satir]`: son pipeline durumu ve is logu kuyrugu, yalnizca okuma.
+  Claude Code'da `allow: Bash(scripts/ci-status.sh *)`; `ask: Bash(ssh *)` degismedi.
+- Girdi siki dogrulanir (gitlab-rails runner root yetkisiyle Ruby calistirir); enjeksiyon denemeleri reddedildi.
+- Cikti maskelenir: ilk denemede artifact yukleme satirinda job JWT oneki gorundu.

@@ -54,7 +54,9 @@ Lab CA: `infra/ansible/files/securestream-root-ca.crt` (use it as `--cacert` / `
 
 ## Useful commands
 ```bash
-# Last pipeline of a project
+# Last pipeline of a project (read-only, no approval needed; job log: add `<job> [lines]`)
+scripts/ci-status.sh securestream/catalog-api
+# Same via raw gitlab-rails (asks for ssh approval)
 ssh ubuntu@10.10.10.10 'sudo gitlab-rails runner "p = Project.find_by_full_path(%q(securestream/catalog-api)).ci_pipelines.order(:id).last; puts p.id.to_s + %q( ) + p.status; p.builds.order(:id).each { |b| puts b.name.ljust(14) + b.status }"'
 # Vault sealed after a reboot
 ~/securestream/scripts/vault-unseal.sh
