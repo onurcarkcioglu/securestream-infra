@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(~/.config/securestream/**)",
+      "Read(~/.ssh/**)",
+      "Read(~/.kube/**)",
+      "Read(infra/ansible/secrets/**)",
+      "Read(infra/ansible/inventory/group_vars/*/vault.yml)",
+      "Read(*.tfstate)",
+      "Read(*.tfstate.*)",
+      "Read(*.env)",
+      "Bash(ansible-vault view *)",
+      "Bash(ansible-vault decrypt *)",
+      "Bash(ansible-vault edit *)",
+      "Bash(vault kv get *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(terraform destroy *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(terraform apply *)",
+      "Bash(ansible-playbook *)",
+      "Bash(helm upgrade *)",
+      "Bash(helm uninstall *)",
+      "Bash(kubectl apply *)",
+      "Bash(kubectl delete *)",
+      "Bash(vault operator *)",
+      "Bash(vault token *)",
+      "Bash(vault write *)",
+      "Bash(vault policy *)",
+      "Bash(ssh *)"
+    ]
+  }
+}

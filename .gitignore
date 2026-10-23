@@ -4,3 +4,4 @@
 .env
 *.env
 tfplan
+.claude/settings.local.json
