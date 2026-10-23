@@ -94,16 +94,18 @@ class Api:
         return self.call("GET", f"{path}?{query}").get("results", [])
 
 
-def multipart(fields: dict[str, str], file_field: str, file_path: Path) -> tuple[bytes, str]:
+def multipart(
+    fields: dict[str, str], file_field: str, name: str, content: bytes
+) -> tuple[bytes, str]:
     boundary = uuid.uuid4().hex
     parts = []
     for name, value in fields.items():
         header = f'Content-Disposition: form-data; name="{name}"'
         parts.append(f"--{boundary}\r\n{header}\r\n\r\n{value}\r\n".encode())
-    header = f'Content-Disposition: form-data; name="{file_field}"; filename="{file_path.name}"'
+    header = f'Content-Disposition: form-data; name="{file_field}"; filename="{name}"'
     parts.append(
         f"--{boundary}\r\n{header}\r\nContent-Type: application/octet-stream\r\n\r\n".encode()
-        + file_path.read_bytes()
+        + content
         + b"\r\n"
     )
     parts.append(f"--{boundary}--\r\n".encode())
@@ -117,6 +119,25 @@ def normalise(path: str, base: str) -> str:
     if not base or rel == base or rel.startswith(base + "/"):
         return rel
     return str(Path(base) / rel)
+
+
+DIGEST = re.compile(r"@sha256:[0-9a-f]{64}")
+
+
+def report_content(rep: dict) -> bytes:
+    """Report bytes as uploaded. Trivy: the image digest is removed from ArtifactName and Target.
+    The parser uses Target as file_path, which is part of the dedup hash; with the digest in it,
+    every build closed all image findings and opened them again, resetting their SLA clock."""
+    raw = rep["file"].read_bytes()
+    if rep["scan_type"] != "Trivy Scan":
+        return raw
+    data = json.loads(raw)
+    if isinstance(data.get("ArtifactName"), str):
+        data["ArtifactName"] = DIGEST.sub("", data["ArtifactName"])
+    for result in data.get("Results") or []:
+        if isinstance(result.get("Target"), str):
+            result["Target"] = DIGEST.sub("", result["Target"])
+    return json.dumps(data).encode()
 
 
 CHECK_ID = re.compile(r"^Check Id: (\S+)$", re.MULTILINE)
@@ -162,14 +183,18 @@ def reimport(api: Api, args: argparse.Namespace, rep: dict) -> int | None:
         "branch_tag": env.get("CI_COMMIT_REF_NAME", ""),
         "version": env.get("CI_COMMIT_SHORT_SHA", ""),
     }
-    body, ctype = multipart({k: v for k, v in fields.items() if v}, "file", rep["file"])
+    body, ctype = multipart(
+        {k: v for k, v in fields.items() if v}, "file", rep["file"].name, report_content(rep)
+    )
     res = api.call("POST", "/reimport-scan/", data=body, ctype=ctype, allow=(404,))
     if res.get("_status") == 404:
         # First upload of this label, no test yet: import-scan creates it in the engagement.
         # close_old_findings must be off here: on import it acts on every test of the same scan type
         # in the engagement (trivy-fs and trivy-image share the Trivy parser).
         fields["close_old_findings"] = "false"
-        body, ctype = multipart({k: v for k, v in fields.items() if v}, "file", rep["file"])
+        body, ctype = multipart(
+            {k: v for k, v in fields.items() if v}, "file", rep["file"].name, report_content(rep)
+        )
         res = api.call("POST", "/import-scan/", data=body, ctype=ctype)
         print(f"NEW  {rep['label']}: {rep['scan_type']} -> test {res.get('test')} created")
         return res.get("test")
