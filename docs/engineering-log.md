@@ -220,3 +220,9 @@
   ci-templates `af0c6c6` (dal): istisnalar dosya yolu olmayan bulgularda `component_name` ile eslesir.
 - Olu deny kurali `Write(scripts/ci-status.sh)` (ders #35) ve `kubectl -n … get secret` deny kuralini atlatti, RBAC
   durdurdu (ders #36).
+
+## AI asistani icin koruma katmanlari ozeti (2026-10-23)
+- Insan iki repoda `.claude/settings.json`'u degistirdi: olu `Write(scripts/ci-status.sh)` silindi, deny
+  `Bash(kubectl * get secret*)` / `Bash(kubectl * describe secret*)`. Zararsiz testler: ikisi de engellendi.
+- `docs/ai-guardrails.md`: alti katman (metin kurallari, auto-mode siniflandiricisi, insan onayi, RBAC, dosya sahipligi,
+  CI kapilari), her biri icin durdurdugu/durduramadigi ve kanit; olay tablosu, kalan riskler, yol haritasi.

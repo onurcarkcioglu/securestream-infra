@@ -141,6 +141,7 @@ never typed into files or chat. See [runbooks](docs/runbooks/).
 - [Security controls and framework mapping](docs/security-controls.md)
 - [Requirements traceability](docs/requirements-traceability.md) — requirement → control → evidence → status
 - [Shared CI templates](docs/ci-templates.md) — how a project joins the security chain (`securestream/ci-templates`)
+- [AI assistant guardrails](docs/ai-guardrails.md) — control layers for the AI assistant, what each stops, incidents
 - [Threat model (STRIDE)](docs/threat-model.md)
 - [Architecture decision records](docs/adr/)
 - [Runbooks](docs/runbooks/) — Vault unseal, secret leak response, rejected image, credential rotation
