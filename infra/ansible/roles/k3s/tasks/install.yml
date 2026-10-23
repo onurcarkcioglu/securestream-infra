@@ -4,6 +4,8 @@
   register: k3s_installed
   changed_when: false
   failed_when: false
+  # Salt okunur; check modunda da calismali, yoksa surum bos kalir ve indirme "degisecek" gorunur
+  check_mode: false
 
 - name: k3s kurulum betiğini indir
   ansible.builtin.get_url:

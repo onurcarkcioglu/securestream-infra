@@ -30,6 +30,7 @@
     dest: /etc/rancher/k3s/config.yaml
     mode: "0600"
   no_log: true
+  diff: false   # icerik gizli (token / istemci anahtari): --diff de basmamali
   notify: k3s yeniden başlat
 
 - name: k3s server kur
@@ -65,6 +66,7 @@
     src: /etc/rancher/k3s/k3s.yaml
   register: k3s_kubeconfig
   no_log: true
+  diff: false   # icerik gizli (token / istemci anahtari): --diff de basmamali
 
 # 127.0.0.1 adresi isimle değiştirilir; sertifikada (tls-san) bu isim var.
 - name: Admin kubeconfig'i ss-mgmt'ye yaz (root:root 0600)
@@ -77,3 +79,4 @@
   delegate_to: localhost
   become: true
   no_log: true
+  diff: false   # icerik gizli (token / istemci anahtari): --diff de basmamali
