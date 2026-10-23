@@ -95,14 +95,14 @@ class Api:
 
 
 def multipart(
-    fields: dict[str, str], file_field: str, name: str, content: bytes
+    fields: dict[str, str], file_field: str, filename: str, content: bytes
 ) -> tuple[bytes, str]:
     boundary = uuid.uuid4().hex
     parts = []
     for name, value in fields.items():
         header = f'Content-Disposition: form-data; name="{name}"'
         parts.append(f"--{boundary}\r\n{header}\r\n\r\n{value}\r\n".encode())
-    header = f'Content-Disposition: form-data; name="{file_field}"; filename="{name}"'
+    header = f'Content-Disposition: form-data; name="{file_field}"; filename="{filename}"'
     parts.append(
         f"--{boundary}\r\n{header}\r\nContent-Type: application/octet-stream\r\n\r\n".encode()
         + content
