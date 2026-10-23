@@ -36,11 +36,11 @@ Lab CA: `infra/ansible/files/securestream-root-ca.crt` (use it as `--cacert` / `
 1. **Never read, print, copy or summarise secret values.** This includes `~/.config/securestream/`,
    `infra/ansible/secrets/`, `infra/ansible/inventory/group_vars/*/vault.yml`, kubeconfigs, tokens, keys and
    `vault kv get` output. Verify a secret only by length or prefix.
-   kubectl reads the kubeconfig itself, so file deny rules do not cover it: never `kubectl get/describe secret`,
-   never `-o yaml` / `-o json` (they dump Secret data and env values). Use `-o wide` or `-o jsonpath=` for the
-   specific non-secret fields you need.
+   kubectl reads the kubeconfig itself, so file deny rules do not cover it: never `kubectl get/describe secret`.
    **kubectl identity:** the assistant uses kubectl only as `claude-readonly` (`~/.kube/config` →
-   `~/.kube/claude-readonly.yaml` after `scripts/kubeconfig-lockdown.sh`; read-only RBAC, no secrets, no logs/exec).
+   `~/.kube/claude-readonly.yaml`, `scripts/kubeconfig-lockdown.sh`; read-only RBAC, no secrets, no logs/exec).
+   RBAC is the boundary, so `-o yaml` / `-o json` are allowed; they still show env values, so print only the fields
+   you need.
    Never use `/etc/securestream/admin.kubeconfig`, `--kubeconfig`, `--context`, `--token` or `KUBECONFIG=`. Cluster
    changes (`kubectl apply`, `helm`, `platform/install.sh`) are run by the human with `sudo … --kubeconfig
    /etc/securestream/admin.kubeconfig`. Token renewal (12 h): the human runs `sudo scripts/claude-kubeconfig.sh`.

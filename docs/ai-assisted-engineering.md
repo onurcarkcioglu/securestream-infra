@@ -74,6 +74,8 @@ Controls are only claimed after they were tested. Tests of the Claude Code setup
 | `git push --dry-run origin main` in auto mode (sends nothing) | Approval prompt shown: "Ask rule Bash(git push *) overrides auto mode for this command"; the human answered No and the command did not run | `ask` rules still apply in auto mode; the push decision stays with the human |
 | Plain `kubectl auth whoami` / `can-i get secrets -A` (no `KUBECONFIG`) while `Read(~/.kube/**)` was denied and `~/.kube/claude-readonly.yaml` existed, 2026-10-23 | `system:admin`, groups `system:masters`; `yes` | A file deny rule does not stop a program that opens the file itself; the RBAC boundary needs the admin credential out of the user's reach (lessons learned #31) |
 | Assistant edits its own `.claude/settings.json` (add `env.KUBECONFIG`, remove deny rules) in auto mode | Refused by the auto-mode classifier ("Self-Modification") | Permission changes stay with the human |
+| After `kubeconfig-lockdown.sh` (run by the human with sudo) and the human's settings change: `echo $KUBECONFIG`, plain `kubectl auth whoami`, `kubectl get pods -n catalog -o json \| jq '.items \| length'`, `can-i get secrets -A`, `can-i '*' '*' -A`, 2026-10-23 | `/home/ubuntu/.kube/claude-readonly.yaml`; `system:serviceaccount:claude-readonly:claude-readonly`; `2`; `no`; `no`. The lockdown script itself showed the same identity without `KUBECONFIG` and the admin file unreadable for `ubuntu` | The boundary moved from text matching to RBAC and file ownership; the `-o yaml/json` deny rules were removed by the human only after this proof (lessons learned #32) |
+| A compound command containing the text `KUBECONFIG=` (inside an `echo`) | Refused by the new deny rule `Bash(*KUBECONFIG=*)` | Text rules match text, harmless or not: a guardrail with false positives, not a boundary |
 | Proxmox root CA from the TLS chain (`openssl s_client -showcerts`) | pveproxy sends only the leaf certificate; the assistant stopped as instructed | The CA file came from the human; its SHA-256 matched the fingerprint the human read over a separate channel |
 | `scripts/tf.sh plan` with `PROXMOX_VE_INSECURE=false`; same with the lab CA in place of pve1's CA | Exit 0, no changes; with the wrong CA: `x509: certificate signed by unknown authority`, exit 1 | Verification is on and really checks the CA; registry and GitLab still reachable |
 | `sudo -n true` in auto mode, after adding ask rule `Bash(sudo *)` (ss-mgmt has passwordless sudo; before the rule, sudo ran without a prompt) | Approval prompt shown: "Ask rule Bash(sudo *) overrides auto mode"; the human answered No and the command did not run | Root on the bastion now needs a human yes per command; the NOPASSWD risk itself remains (see security-controls) |
@@ -107,10 +109,13 @@ its own Kubernetes identity, and the API server decides:
 - Proof: `can-i` 13/13; real requests: `get pods` works, `logs` and `exec` are Forbidden.
 - The identity is only the boundary if the assistant cannot reach any other credential. On 2026-10-23 its plain
   `kubectl` was still `system:admin` (lessons learned #31). `scripts/kubeconfig-lockdown.sh` moves the admin
-  kubeconfig to `root:root 0600`; after that the remaining path is `sudo`, which is an ask rule with human approval
-  (NOPASSWD sudo is a known risk). Next step on the roadmap: a separate Unix user for the assistant.
+  kubeconfig to `root:root 0600`; after that the remaining paths are `sudo` and `ssh` + `sudo` to the k3s nodes,
+  both ask rules with human approval (NOPASSWD sudo is a known risk). Next step on the roadmap: a separate Unix user
+  for the assistant.
 - Only after `kubectl auth whoami` (no `KUBECONFIG`) shows `claude-readonly` are the text rules `-o yaml/json`
-  removed, by the human.
+  removed, by the human. Done 2026-10-23 after `kubeconfig-lockdown.sh` (verification log). Remaining layer: the same
+  Unix user with NOPASSWD sudo, and `ssh` + `sudo` to `/etc/rancher/k3s/k3s.yaml` on the nodes; both only behind ask
+  rules and human approval (security-controls §4).
 
 ## What the AI is good at here, and what it is not
 - **Good at:** first drafts of roles, pipelines and policies; reading release notes and schemas; turning a

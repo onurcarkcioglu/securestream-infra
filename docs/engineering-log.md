@@ -178,7 +178,7 @@
 - Community Build sinirlari: yalnizca ana dal analiz edilir, dal/MR analizi yok; `SONAR_TOKEN` protected oldugu icin
   is de yalnizca main'de calisir.
 
-## AI asistani icin salt okunur kubeconfig (2026-10-23, kismen)
+## AI asistani icin salt okunur kubeconfig (2026-10-23)
 - `platform/manifests/claude-readonly-rbac.yaml` (kumeye uygulandi): namespace + SA `claude-readonly`, ClusterRole
   yalnizca get/list/watch; 33 API grubu acikca listeli, secrets / alt kaynaklar / ESO generator'lari yok.
   Uretici: `scripts/claude-readonly-rbac.sh` (`--check` sapmada exit 1, negatif test yapildi).
@@ -189,3 +189,6 @@
 - `scripts/kubeconfig-lockdown.sh` (insan, sudo ile): admin kubeconfig `/etc/securestream/admin.kubeconfig`
   (root:root 0600), `~/.kube/config` → `claude-readonly.yaml`. `k3s` rolu admin dosyasini artik oraya yaziyor.
 - Yol haritasi: asistan icin ayri Unix kullanicisi.
+- Tamamlandi: insan `kubeconfig-lockdown.sh`'i sudo ile calistirdi ve iki repoda `.claude/settings.json`'u degistirdi
+  (`-o yaml/json` deny kaldirildi, `env.KUBECONFIG`, 4 deny + 2 ask). Kanit: `KUBECONFIG`'siz `kubectl auth whoami` →
+  `claude-readonly`, `can-i get secrets -A` → no. Sinir metin eslestirmeden RBAC ve dosya sahipligine tasindi.
