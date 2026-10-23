@@ -27,7 +27,6 @@
       "Bash(kubectl get secrets*)",
       "Bash(kubectl describe secret*)",
       "Edit(scripts/ci-status.sh)",
-      "Write(scripts/ci-status.sh)",
       "Bash(git push * --delete*)",
       "Bash(git push --delete*)",
       "Bash(git push * -d *)",
@@ -37,7 +36,9 @@
       "Read(/etc/securestream/**)",
       "Bash(*admin.kubeconfig*)",
       "Bash(*--kubeconfig*)",
-      "Bash(*KUBECONFIG=*)"
+      "Bash(*KUBECONFIG=*)",
+      "Bash(kubectl * get secret*)",
+      "Bash(kubectl * describe secret*)"
     ],
     "ask": [
       "Bash(git push *)",
