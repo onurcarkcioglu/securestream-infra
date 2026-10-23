@@ -28,10 +28,10 @@ gaps are listed openly with the planned fix. Evidence links point to the build l
 | **PS.2** Verify software release integrity | cosign signatures verified by Kyverno; public key published in the application repository |
 | **PS.3** Archive and protect each release | Image + CycloneDX SBOM attestation stored next to the image in the registry |
 | **PW.4** Reuse well-secured software | SCA (Trivy fs) on dependencies; base image by digest; HIGH/CRITICAL fixable CVEs block the build |
-| **PW.6** Configure build processes securely | Multi-stage Dockerfile, non-root user, build without privileged containers |
+| **PW.6** Configure build processes securely | Multi-stage Dockerfile, non-root user, build without privileged containers; hadolint gates every Dockerfile change (`hadolint` job) |
 | **PW.7** Review / analyse code | Semgrep (`p/python`, `p/owasp-top-ten`) and ruff bandit rules on every commit |
 | **PW.8** Test executable code | Unit tests that encode security requirements (input validation, security headers, auth); OWASP ZAP API scan after deploy |
-| **PW.9** Secure-by-default settings | Swagger UI off, security headers on, pod hardening enforced by Pod Security `restricted` |
+| **PW.9** Secure-by-default settings | Swagger UI off, security headers on, pod hardening enforced by Pod Security `restricted`; Helm chart scanned by Checkov (`checkov-helm`), renders only by image digest |
 | **RV.1** Identify vulnerabilities continuously | Trivy on every build; Falco at runtime · **Gap:** continuous SBOM monitoring (Dependency-Track) |
 | **RV.2** Assess and remediate | ZAP findings (3 warnings) fixed in code, locked by a test, re-scanned to 0 |
 | **RV.3** Analyse root causes | Each incident has a root-cause entry in [lessons-learned](lessons-learned.md) |
@@ -61,12 +61,19 @@ Honest position: the signing and SBOM pieces are in place; formal SLSA Build L2 
 | Runtime detection | Falco DaemonSet (modern eBPF) |
 | Benchmark scan | **Gap** — kube-bench / Kubescape scheduled for the next phase |
 
-## 5. Secrets lifecycle
+## 5. Scanner exceptions
+
+Findings that cannot be fixed are recorded in `security/exceptions.yaml` of the scanned repository (`id, tool, rule,
+path, reason, owner, created, expires`, at most 90 days), never as inline suppressions. Checkov runs in report mode
+and `scripts/scan-gate.py` decides: a finding passes only with a matching, unexpired exception; a report with zero
+checks fails. Current: catalog-api `EXC-0001` (CKV_K8S_21, render-time namespace, expires 2027-01-21).
+
+## 6. Secrets lifecycle
 
 | Secret | Created | Stored | Consumed by | Rotation |
 |---|---|---|---|---|
 | Vault unseal keys + initial root token | `vault operator init` piped into `ansible-vault encrypt` | Ansible Vault (excluded from public mirror) | `scripts/vault-unseal.sh` | Root token revoked after setup; rekey procedure in runbook |
-| catalog API key | `openssl rand` piped into `vault kv put` | Vault KV v2 | External Secrets → pod env | New KV version + ESO force-sync |
+| catalog API key | `openssl rand` piped into `vault kv put` | Vault KV v2 | External Secrets → read-only file in the pod (`/run/secrets/catalog`, not env; CKV_K8S_35) | New KV version + ESO force-sync |
 | cosign private key | Generated in RAM (`/dev/shm`) | Ansible Vault + GitLab protected/hidden variable | `sign` job on `main` | Runbook: new key pair, update policy |
 | GitLab runner token | GitLab API → `ansible-vault encrypt_string` | Ansible Vault | Runner `config.toml` (mode 0600, `no_log`) | Re-register runner |
 | Registry deploy token | GitLab service → Kubernetes secret via pipe | Kubernetes secrets (`catalog`, `kyverno`) | kubelet image pulls, Kyverno | 1-year expiry |
