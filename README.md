@@ -138,6 +138,7 @@ never typed into files or chat. See [runbooks](docs/runbooks/).
 ## Documentation
 
 - [Security controls and framework mapping](docs/security-controls.md)
+- [Requirements traceability](docs/requirements-traceability.md) — requirement → control → evidence → status
 - [Threat model (STRIDE)](docs/threat-model.md)
 - [Architecture decision records](docs/adr/)
 - [Runbooks](docs/runbooks/) — Vault unseal, secret leak response, rejected image, credential rotation

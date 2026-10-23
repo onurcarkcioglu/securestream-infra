@@ -1,0 +1,117 @@
+# Platform requirements traceability
+
+Each platform security requirement is traced to its control, the evidence that proves it and its status.
+Evidence paths without a prefix are in this repository; `catalog-api:` marks the application repository.
+Pipeline numbers are GitLab pipeline IDs (shared across both projects). Commit hashes are short SHAs of `main`.
+
+Status: **Done** = implemented and verified (positive and, where possible, negative test) · **Partial** = in place
+with a stated limit · **Roadmap** = not implemented; no evidence is claimed.
+
+Framework column: OWASP Top 10 CI/CD Security Risks (`SEC-n` = CICD-SEC-n), NIST SSDF SP 800-218 (`PO`, `PS`,
+`PW`, `RV`), SLSA v1.0 Build track. Details per framework: [security-controls](security-controls.md).
+
+## Requirement baseline
+
+| Requirement | Where traced | Status |
+|---|---|---|
+| CI/CD pipelines and secure SDLC | §1 | Done |
+| Security checks for source code, dependencies, Dockerfiles, container images, Helm charts and IaC | §1, §5 | Done |
+| SAST, SCA, container security and IaC scanning integrated and operated in CI/CD | §1, §2 | Done |
+| SonarQube or equivalent application security tooling | §1 | Done |
+| Evaluation, prioritisation and remediation of findings | §2 | Done |
+| Security gates, quality gates and pipeline policy | §1 | Done |
+| Docker and Kubernetes | §1, §3 | Done |
+| IAM, secrets management and privileged access in multi-cloud / hybrid setups | §4, §5, §6 | Partial |
+| Git, Terraform, Helm | §1, §5 | Done |
+| Linux operations and troubleshooting | §5, [lessons-learned](lessons-learned.md) | Done |
+| Automation, standardisation and continuous improvement of security controls | §1, §6 | Partial (central CI templates: Roadmap) |
+| AWS, Azure, Google Cloud and on-prem | §5 | Partial (cloud: scan-only samples) |
+| Optional: CNAPP / CSPM / CWPP | §3, §5 | Partial |
+| Optional: privileged access management / secrets management (dedicated PAM tool or equivalent) | §4, §6 | Partial |
+| Optional: Kubernetes security, admission control, policy-as-code, runtime security | §3 | Done (posture scan: Roadmap) |
+| Optional: automation in Python / Bash | §1, §2, §6 | Done |
+| Optional: false-positive management, rule/policy tuning, developer experience | §2 | Done |
+| Optional: monitoring, logging and observability | §7 | Roadmap (audit logs local only) |
+
+## 1. CI/CD security
+
+| Requirement | Control / implementation | Evidence | Status | Gap or residual risk | Framework |
+|---|---|---|---|---|---|
+| Pipeline flow control | Protected `main`; `sign`, `deploy`, `dast`, `sonarqube`, `defectdojo-upload` run on `main` only; deploy `resource_group` + `helm --atomic`; `sign` needs `image-scan` and `sonarqube` | `catalog-api:.gitlab-ci.yml`; pipeline 58 (15/15 jobs) | Done | A red gate on `main` stops release, not the merge itself | SEC-1, PO.3 |
+| Lint and security unit tests | ruff with bandit `S` rules; pytest tests encode input validation, security headers, admin auth; coverage report | `catalog-api:pyproject.toml`, `catalog-api:tests/test_main.py`; pipeline 58 (`lint`, `unit-test`) | Done | — | PW.7, PW.8 |
+| SAST | Semgrep `p/python` + `p/owasp-top-ten` (`--error`); SonarQube Community Build 26.9 with Quality Gate "SecureStream" on new code (0 new bugs, 0 new vulnerabilities, 100 % hotspots reviewed, coverage ≥ 70 %), `sonar.qualitygate.wait=true` | `catalog-api:sonar-project.properties`, `infra/ansible/roles/sonarqube/`, `c76d6a5`, `catalog-api` `886d080`; pipeline 58 gate PASSED; negative test (local, not pushed): weak-TLS helper → `new_vulnerabilities=3`, gate ERROR | Done | SonarQube runs on `main` only (protected token, Community Build has no branch/MR analysis); the first analysis is the new-code baseline ([lessons-learned](lessons-learned.md) #29) | PW.7 |
+| SCA | Trivy fs: full JSON report, gate on fixable HIGH/CRITICAL; dependencies pinned | `catalog-api:.gitlab-ci.yml` (`sca`), `catalog-api:requirements.txt` | Done | No continuous monitoring of released SBOMs (Dependency-Track: Roadmap, §7) | SEC-3, PW.4, RV.1 |
+| Secret scanning | gitleaks `--redact` as blocking gate in both repositories (no `allow_failure`, no allowlist); every file on a secret path must carry an Ansible Vault header | `.gitlab-ci.yml` (`secret-scan`), `scripts/check-vault-encrypted.sh`; `077019f`, `a6433f1`; pipeline 43 | Done | — | SEC-6, PS.1 |
+| Dockerfile scanning | hadolint (SARIF + JSON), default threshold blocks | `catalog-api:.gitlab-ci.yml` (`hadolint`), `catalog-api` `1c72ce0`; pipeline 39 (0 findings); local negative test: bad line → exit 1 | Done | — | PW.6 |
+| Helm chart scanning | Checkov `helm,kubernetes` + `scripts/scan-gate.py` (fails on unexcepted findings and on empty reports); chart renders only by image digest | `catalog-api:.gitlab-ci.yml` (`checkov-helm`), `catalog-api` `74e6a51`, `1c72ce0`; pipeline 39: 96 checks, 4 excepted (`EXC-0001`) | Done | `EXC-0001` (CKV_K8S_21) expires 2027-01-21 | PW.9 |
+| Container image scanning and SBOM | Trivy image (gate on fixable HIGH/CRITICAL) + CycloneDX SBOM | `catalog-api:.gitlab-ci.yml` (`image-scan`); pipeline 58 | Done | — | PW.4, PS.3 |
+| DAST | OWASP ZAP API scan after deploy; FAIL rules in `zap-rules.tsv` block | `catalog-api:zap-rules.tsv`, `catalog-api:.gitlab-ci.yml` (`dast`); pipeline 58 | Done | ZAP WARN results (exit code 2) are reported, not blocking (deliberate, documented) | PW.8 |
+| Build integrity | Kaniko fork without privileged runner; tool images pinned by digest, ~2-week cool-down | `catalog-api:scripts/pin-images.sh`, [ADR 0004](adr/0004-kaniko-fork-for-builds.md), [ADR 0006](adr/0006-digest-pinning-and-cooldown.md) | Done | — | SEC-3, SEC-7, PO.3 |
+| Image signing and verification | cosign signature + signed CycloneDX attestation; Kyverno `ImageValidatingPolicy` (`validationActions: [Deny]`) admits only signed images | `catalog-api:cosign.pub`, `platform/manifests/kyverno-verify-images.yaml`, [ADR 0005](adr/0005-cosign-key-based-without-public-tlog.md), [runbook](runbooks/unsigned-image-rejected.md) | Done | No transparency log (no Rekor in the lab; signatures verified against `cosign.pub`) | SEC-9, PS.2, SLSA |
+| Build provenance | — | — | **Roadmap** | **Gap:** no SLSA provenance attestation; evidence today is signature + SBOM + pipeline logs, so SLSA Build L2 is not met | SLSA Build L2 |
+| Runner and credential isolation | Group runner, tagged jobs only, `privileged = false`; signing key and deploy kubeconfig are protected, masked, hidden variables | `infra/ansible/roles/gitlab_runner/`, [security-controls](security-controls.md) §1 | Done | — | SEC-4, SEC-5, SEC-7 |
+| Central CI templates | — | — | **Roadmap** | Scanner jobs and `scripts/scan-gate.py` are duplicated in both repositories; a new project cannot yet join the chain by `include` | PO.3 |
+
+## 2. Vulnerability management
+
+| Requirement | Control / implementation | Evidence | Status | Gap or residual risk | Framework |
+|---|---|---|---|---|---|
+| Central findings register | DefectDojo 3.3.300 on ss-sec (TLS, lab CA); products `catalog-api`, `securestream-platform`; engagement "CI/CD"; every `main` pipeline reimports gitleaks, Semgrep, Trivy fs/image, ZAP, hadolint, Checkov | `infra/ansible/roles/defectdojo/`, `scripts/defectdojo-upload.py`; `5f9be86`, `584ac3c`, `catalog-api` `4950184`; pipelines 51 and 52 | Done | SonarQube findings are not imported; no database backup | RV.2 |
+| Stable deduplication | Image digest removed from Trivy target before import, so findings are not closed and reopened on every build | `3b5929a`, `catalog-api` `e695db2`; pipeline 58: `trivy-image created=0 closed=0 untouched=170` | Done | — | RV.2 |
+| SLA | Critical 7, High 30, Medium 90, Low 180 days, enforced in DefectDojo | `infra/ansible/roles/defectdojo/files/dd-bootstrap.py`, [vulnerability-management](vulnerability-management.md) | Done | — | RV.2 |
+| Prioritisation | Severity × exploitability × exposure; triage flow and decision owners | [vulnerability-management](vulnerability-management.md) | Done | Process document; no automated EPSS/KEV enrichment | RV.2 |
+| False positives and risk acceptance | `security/exceptions.yaml` (`id, tool, rule, path, reason, owner, created, expires`, max 90 days); `exceptions-check` fails on expired/invalid entries; entries mirrored as time-boxed Risk Acceptances | `scripts/exceptions-check.py`, `security/exceptions.yaml`, `catalog-api:security/exceptions.yaml`; negative tests (expired, > 90 days, duplicate, missing field, unknown tool, bad date → exit 1) | Done | The Risk Acceptance `catalog-api:EXC-0001` is rewritten on every run (not idempotent) | RV.2 |
+| Root-cause analysis | Every incident gets a lessons-learned entry that changed a script, check or process | [lessons-learned](lessons-learned.md) (#1–#33) | Done | — | RV.3 |
+
+## 3. Kubernetes security
+
+| Requirement | Control / implementation | Evidence | Status | Gap or residual risk | Framework |
+|---|---|---|---|---|---|
+| Cluster hardening | k3s `secrets-encryption`, API audit log, `protect-kernel-defaults` | `infra/ansible/roles/k3s/templates/config-server.yaml.j2`; `k3s.yml --check --diff` → `changed=0` on 3 nodes (`2435628`) | Done | Audit log stays on the node (§7) | — |
+| Workload hardening | Pod Security `restricted` on `catalog`; non-root, read-only rootfs, dropped capabilities, seccomp, `fsGroup`; NetworkPolicy ingress only from the ingress controller, no egress; secret as file, not env | `platform/manifests/namespace-catalog.yaml`, `catalog-api:deploy/helm/catalog-api/templates/`; `catalog-api` `0490699`, `0ecca7d` | Done | — | PW.9 |
+| Admission control / policy-as-code | Kyverno signature verification (Deny) | `platform/manifests/kyverno-verify-images.yaml`, [ADR 0003](adr/0003-kyverno-imagevalidatingpolicy.md) | Done | — | SEC-9 |
+| Runtime security | Falco DaemonSet (modern eBPF); shell-in-container rule tested with `kubectl exec -it` | `platform/helm-values/falco.yaml`, [lessons-learned](lessons-learned.md) #9 | Done | Alerts are not shipped to a central store (§7) | RV.1 |
+| Least-privilege deploy identity | Namespace-scoped Role for the CI deploy ServiceAccount | `platform/manifests/catalog-deployer-rbac.yaml` | Done | — | SEC-5 |
+| Posture / benchmark scanning | — | — | **Roadmap** | No Kubescape (NSA, MITRE) or kube-bench scan and no score yet | — |
+
+## 4. Secrets management
+
+| Requirement | Control / implementation | Evidence | Status | Gap or residual risk | Framework |
+|---|---|---|---|---|---|
+| Central secrets store | HashiCorp Vault (Raft, TLS 1.2+, file audit); External Secrets Operator with Kubernetes auth; application key delivered as a read-only file | `infra/ansible/roles/vault/`, `platform/manifests/catalog-external-secret.yaml`, `platform/manifests/vault-token-reviewer.yaml`, [ADR 0007](adr/0007-vault-and-external-secrets.md), [runbook](runbooks/vault-unseal.md) | Done | — | SEC-6 |
+| Platform secrets at rest | Ansible Vault, values generated and moved only through pipes; CI check that every secret file is encrypted | `scripts/check-vault-encrypted.sh`; `077019f`, `a6433f1` | Done | — | SEC-6, PS.1 |
+| CI credentials | Protected + masked + hidden GitLab variables, generated server-side and piped (e.g. `scripts/sonarqube-ci-token.sh`, `scripts/defectdojo-ci-token.sh`), verified by length/prefix only; expiry and rotation | [runbook](runbooks/credential-rotation.md), [security-controls](security-controls.md) §6 | Done | `SONAR_TOKEN` and `DD_API_KEY` expire 2027-01-21 (rotation by script) | SEC-6 |
+| Leak response | First-30-minutes runbook; rotate first | [runbook](runbooks/secret-leak-first-30-minutes.md), [lessons-learned](lessons-learned.md) #12 | Done | — | SEC-6 |
+| Public mirror without secrets | `publish-github` rewrites history without secret files; needs `secret-scan` and `iac-scan` | `.gitlab-ci.yml` (`publish-github`), [ADR 0008](adr/0008-sanitized-public-mirror.md); pipeline 64 | Done | — | PS.1 |
+| Privileged access management (PAM) | Vault for secrets; ask rules + human approval for `sudo`, `ssh`, pushes; admin kubeconfig root-only | §6 | **Partial** | No session brokering or recording; user `ubuntu` on the bastion has NOPASSWD sudo | SEC-2 |
+
+## 5. Infrastructure as code (on-prem and cloud samples)
+
+| Requirement | Control / implementation | Evidence | Status | Gap or residual risk | Framework |
+|---|---|---|---|---|---|
+| On-prem provisioning | Terraform (`bpg/proxmox`) with TLS verification against the pve CA; state in GitLab (encrypted, locked, versioned) | `infra/terraform/proxmox/`, `scripts/tf.sh`, [lessons-learned](lessons-learned.md) #16, #17 | Done | — | SEC-7 |
+| Configuration management | Ansible roles; order syntax-check → check/diff → apply → second run `changed=0`; secret tasks `no_log` + `diff: false` | `infra/ansible/`; SonarQube `appsec.yml` second run `changed=0` (`c76d6a5`); [lessons-learned](lessons-learned.md) #33 | Done | — | PO.3 |
+| IaC security gate | Checkov per module + `scan-gate.py`; custom Proxmox rules (no upstream rules for `bpg/proxmox`); empty report fails | `scripts/iac-scan.sh`, `security/checkov/`, `.gitlab-ci.yml` (`iac-scan`); `2f8c266`, `d2a950c`; pipelines 41, 43 | Done | — | PW.1, PW.2 |
+| AWS / Azure / GCP misconfiguration detection | Insecure and secure samples per cloud (public storage, open SSH/NSG/firewall, IAM `"Action": "*"`, HTTPS not enforced, default service account); `iac-scan-insecure` lists the rules caught | `infra/terraform/samples/{aws,azure,gcp}/{insecure,secure}/`, [README](../README.md#cloud-iac-security-without-cloud-accounts); `iac-scan.sh report`: AWS 25, Azure 30, GCP 11 findings, all 10 expected rules caught; secure samples pass (2 exceptions `EXC-0101`, `EXC-0102`) | Done (scan-only) | No cloud accounts: no `plan`/`apply`, no runtime cloud posture (CSPM), no cloud identity federation | PW.1 |
+| Multi-cloud / hybrid IAM | On-prem: Proxmox API token with VM/datastore/SDN roles only; cloud: IAM wildcard policies detected in samples | [security-controls](security-controls.md) §1 (SEC-2), `infra/terraform/samples/aws/` | **Partial** | No real cloud IAM, SSO or workload identity federation | SEC-2 |
+| CNAPP / CSPM / CWPP | CWPP-like: Trivy, Kyverno, Falco; CSPM-like: Checkov on IaC only | §1, §3 | **Partial** | No unified platform and no runtime cloud posture management | — |
+
+## 6. Access control and AI-assisted operations
+
+| Requirement | Control / implementation | Evidence | Status | Gap or residual risk | Framework |
+|---|---|---|---|---|---|
+| Human identities | Personal GitLab account for daily work, `root` only for administration; GitLab sign-up disabled | [security-controls](security-controls.md) §1 | **Partial** | **Gap:** 2FA on GitLab accounts | SEC-2 |
+| Administrative access path | Bastion-only automation; Tailscale instead of open router ports | [ADR 0001](adr/0001-tailscale-instead-of-port-forwarding.md) | Done | — | PO.5 |
+| AI assistant changes go through the same gates | AI changes are commits that pass the same pipeline; the history shows them (`Co-Authored-By` trailer, 37 of 72 commits in this repository on 2026-10-23); ask rules for push, `ssh`, `sudo`, `ansible-playbook`, `kubectl apply`; allow-listed status script root-owned | `.claude/settings.json`, `scripts/ci-status.sh` (copy at `/usr/local/bin/ci-status`, root:root 0755), [ai-assisted-engineering](ai-assisted-engineering.md), [lessons-learned](lessons-learned.md) #18, #19, #23 | Done | Claude Code rules match command text: guardrails, not a sandbox | SEC-2, PO.5 |
+| AI assistant read-only cluster access | ServiceAccount `claude-readonly`: get/list/watch on explicitly listed resources, no `secrets`, no subresources (`pods/log`, `pods/exec`), no ESO generators; 12 h bound token; admin kubeconfig `root:root 0600` outside the user's home | `platform/manifests/claude-readonly-rbac.yaml`, `scripts/claude-readonly-rbac.sh`, `scripts/claude-kubeconfig.sh`, `scripts/kubeconfig-lockdown.sh`; `f775f4d`, `8e26703`, `c336bfd`; plain `kubectl auth whoami` → `system:serviceaccount:claude-readonly:claude-readonly`, `can-i get secrets -A` → no, `can-i '*' '*' -A` → no; pipelines 61, 63 | Done | Same Unix user as the human with NOPASSWD sudo; `ssh` + `sudo` reach `/etc/rancher/k3s/k3s.yaml` on the nodes; both only behind ask rules and human approval. Token renewal every 12 h. **Roadmap:** separate Unix user for the assistant | SEC-2, SEC-5 |
+| Secret-safe automation output | Values verified by length/prefix only; `--diff` disabled on secret tasks; filtered dry-run output | [lessons-learned](lessons-learned.md) #25, #33; `2435628` | Done | — | SEC-6 |
+
+## 7. Monitoring, logging and continuous monitoring
+
+| Requirement | Control / implementation | Evidence | Status | Gap or residual risk | Framework |
+|---|---|---|---|---|---|
+| Audit logging | Vault file audit, k3s API audit log, GitLab audit events | `infra/ansible/roles/vault/tasks/config.yml`, `infra/ansible/roles/k3s/templates/config-server.yaml.j2` | **Partial** | Logs stay on each host; no aggregation, retention policy or alerting | SEC-10 |
+| Central logging and metrics | — (kube-prometheus-stack, Loki, Alloy, Falcosidekick planned) | — | **Roadmap** | No central log store; Falco alerts not correlated | SEC-10 |
+| Security dashboard | — (Grafana "SecureStream Security" planned) | — | **Roadmap** | No dashboard for Falco, Kyverno, request/error rate, node resources | SEC-10 |
+| Continuous SBOM monitoring | — (Dependency-Track planned) | — | **Roadmap** | New CVEs in released images are only seen on the next build | RV.1 |
+| GitOps for platform manifests | — (Argo CD planned) | — | **Roadmap** | Platform manifests are applied manually by the human | PO.3 |
