@@ -8,3 +8,15 @@ collectors:
     engines:
       containerd:
         sockets: ["/run/k3s/containerd/containerd.sock"]
+# Falco olaylari Falcosidekick uzerinden Loki'ye (Item 9). Etiketler: rule, source, priority, tags.
+falcosidekick:
+  enabled: true
+  replicaCount: 1
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 128Mi }
+  config:
+    loki:
+      hostport: http://loki.monitoring.svc.cluster.local:3100
+      format: json
+      minimumpriority: notice

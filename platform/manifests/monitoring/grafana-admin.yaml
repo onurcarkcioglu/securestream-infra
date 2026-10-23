@@ -1,0 +1,35 @@
+# Grafana admin sifresi kume icinde uretilir (ESO Password generator) ve bir kez yazilir (CreatedOnce).
+# Deger hicbir dosyada, komutta, logda veya ekranda yer almaz. Okuma: insan, admin kubeconfig ile.
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: Password
+metadata:
+  name: grafana-admin
+  namespace: monitoring
+spec:
+  length: 32
+  digits: 5
+  symbols: 5
+  symbolCharacters: "-_.,:+="
+  noUpper: false
+  allowRepeat: true
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: grafana-admin
+  namespace: monitoring
+spec:
+  refreshPolicy: CreatedOnce
+  target:
+    name: grafana-admin
+    creationPolicy: Owner
+    template:
+      data:
+        admin-user: admin
+        admin-password: "{{ .password }}"
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: Password
+          name: grafana-admin

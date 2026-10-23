@@ -1,0 +1,32 @@
+# Prometheus hedefleri: Kyverno politika sonuclari ve Traefik istek metrikleri (catalog-api istek/hata orani).
+# catalog-api'nin kendi /metrics'i NetworkPolicy nedeniyle kazinmaz (yalnizca ingress'ten trafik); Traefik
+# metrikleri istek sayisini ve durum kodunu servis bazinda verir.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kyverno
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames: [kyverno]
+  selector:
+    matchExpressions:
+      - { key: app.kubernetes.io/part-of, operator: Exists }
+  endpoints:
+    - port: metrics-port
+      interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: traefik
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames: [traefik]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: traefik
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s

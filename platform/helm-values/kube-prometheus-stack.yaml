@@ -1,0 +1,95 @@
+# Lab izleme yigini: Prometheus + Grafana + node-exporter + kube-state-metrics. Dusuk kaynak, 7 gun saklama.
+# Grafana admin sifresi kume icinde uretilir (manifests/monitoring/grafana-admin.yaml, ESO Password generator);
+# deger hicbir dosyada, komutta veya ekranda yer almaz.
+alertmanager:
+  # Lab: alarm yonlendirme hedefi yok; uyarilar Grafana'da gorunur
+  enabled: false
+
+# k3s kontrol duzlemi bilesenleri tek surecte calisir, ayri metrik ucu yok: bos hedef ve sahte alarm uretmesin
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    retentionSize: 8GB
+    # Tum namespace'lerdeki ServiceMonitor/PodMonitor'lar (chart etiketi sartı olmadan)
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+      limits: { cpu: "1", memory: 2Gi }
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 10Gi
+
+prometheusOperator:
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 200m, memory: 256Mi }
+
+kube-state-metrics:
+  resources:
+    requests: { cpu: 20m, memory: 64Mi }
+    limits: { cpu: 200m, memory: 256Mi }
+
+prometheus-node-exporter:
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 128Mi }
+
+grafana:
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: securestream-lab-ca
+    hosts: [grafana.securestream.lab]
+    tls:
+      - secretName: grafana-tls
+        hosts: [grafana.securestream.lab]
+  grafana.ini:
+    server:
+      root_url: https://grafana.securestream.lab
+    security:
+      cookie_secure: true
+      disable_gravatar: true
+    users:
+      allow_sign_up: false
+    auth.anonymous:
+      enabled: false
+    analytics:
+      reporting_enabled: false
+      check_for_updates: false
+      check_for_plugin_updates: false
+  additionalDataSources:
+    - name: Loki
+      uid: loki
+      type: loki
+      access: proxy
+      url: http://loki.monitoring.svc.cluster.local:3100
+  # Dashboard'lar ConfigMap'ten (grafana_dashboard: "1" etiketi), tum namespace'lerden
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL

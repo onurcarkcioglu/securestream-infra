@@ -1,0 +1,314 @@
+# Grafana dashboard "SecureStream Security" (sidecar, grafana_dashboard: "1"). Kaynak: bu dosya; UI'daki
+# degisiklikler kalici degildir.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: securestream-security-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  securestream-security.json: |
+    {
+     "uid": "securestream-security",
+     "title": "SecureStream Security",
+     "tags": [
+      "securestream",
+      "security"
+     ],
+     "timezone": "browser",
+     "schemaVersion": 39,
+     "time": {
+      "from": "now-6h",
+      "to": "now"
+     },
+     "refresh": "1m",
+     "panels": [
+      {
+       "id": 1,
+       "type": "timeseries",
+       "title": "Falco events by priority (Loki)",
+       "datasource": {
+        "type": "loki",
+        "uid": "loki"
+       },
+       "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+       },
+       "targets": [
+        {
+         "expr": "sum by (priority) (count_over_time({rule=~\".+\"} [5m]))",
+         "legendFormat": "{{priority}}",
+         "refId": "A",
+         "datasource": {
+          "type": "loki",
+          "uid": "loki"
+         }
+        }
+       ],
+       "fieldConfig": {
+        "defaults": {
+         "custom": {
+          "stacking": {
+           "mode": "normal"
+          }
+         }
+        },
+        "overrides": []
+       }
+      },
+      {
+       "id": 2,
+       "type": "logs",
+       "title": "Falco events (latest)",
+       "datasource": {
+        "type": "loki",
+        "uid": "loki"
+       },
+       "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+       },
+       "targets": [
+        {
+         "refId": "A",
+         "datasource": {
+          "type": "loki",
+          "uid": "loki"
+         },
+         "expr": "{rule=~\".+\", priority=~\"Critical|Error|Warning|Notice\"}"
+        }
+       ],
+       "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+       }
+      },
+      {
+       "id": 3,
+       "type": "timeseries",
+       "title": "Kyverno policy results (1h)",
+       "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+       },
+       "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+       },
+       "targets": [
+        {
+         "expr": "sum by (policy_name, rule_result) (increase(kyverno_policy_results_total[1h]))",
+         "legendFormat": "{{policy_name}} {{rule_result}}",
+         "refId": "A",
+         "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+         }
+        }
+       ],
+       "fieldConfig": {
+        "defaults": {
+         "custom": {
+          "stacking": {
+           "mode": "none"
+          }
+         }
+        },
+        "overrides": []
+       }
+      },
+      {
+       "id": 4,
+       "type": "timeseries",
+       "title": "Kyverno admission requests (1h)",
+       "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+       },
+       "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+       },
+       "targets": [
+        {
+         "expr": "sum by (request_allowed) (increase(kyverno_admission_requests_total[1h]))",
+         "legendFormat": "allowed={{request_allowed}}",
+         "refId": "A",
+         "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+         }
+        }
+       ],
+       "fieldConfig": {
+        "defaults": {
+         "custom": {
+          "stacking": {
+           "mode": "none"
+          }
+         }
+        },
+        "overrides": []
+       }
+      },
+      {
+       "id": 5,
+       "type": "timeseries",
+       "title": "catalog-api request rate by status (Traefik)",
+       "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+       },
+       "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+       },
+       "targets": [
+        {
+         "expr": "sum by (code) (rate(traefik_service_requests_total{service=~\"catalog-catalog-api.*\"}[5m]))",
+         "legendFormat": "{{code}}",
+         "refId": "A",
+         "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+         }
+        }
+       ],
+       "fieldConfig": {
+        "defaults": {
+         "custom": {
+          "stacking": {
+           "mode": "normal"
+          }
+         },
+         "unit": "reqps"
+        },
+        "overrides": []
+       }
+      },
+      {
+       "id": 6,
+       "type": "timeseries",
+       "title": "catalog-api error ratio (5xx)",
+       "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+       },
+       "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+       },
+       "targets": [
+        {
+         "expr": "sum(rate(traefik_service_requests_total{service=~\"catalog-catalog-api.*\",code=~\"5..\"}[5m])) / clamp_min(sum(rate(traefik_service_requests_total{service=~\"catalog-catalog-api.*\"}[5m])), 1e-9)",
+         "legendFormat": "5xx ratio",
+         "refId": "A",
+         "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+         }
+        }
+       ],
+       "fieldConfig": {
+        "defaults": {
+         "custom": {
+          "stacking": {
+           "mode": "none"
+          }
+         },
+         "unit": "percentunit"
+        },
+        "overrides": []
+       }
+      },
+      {
+       "id": 7,
+       "type": "timeseries",
+       "title": "Node CPU usage",
+       "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+       },
+       "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+       },
+       "targets": [
+        {
+         "expr": "1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))",
+         "legendFormat": "{{instance}}",
+         "refId": "A",
+         "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+         }
+        }
+       ],
+       "fieldConfig": {
+        "defaults": {
+         "custom": {
+          "stacking": {
+           "mode": "none"
+          }
+         },
+         "unit": "percentunit"
+        },
+        "overrides": []
+       }
+      },
+      {
+       "id": 8,
+       "type": "timeseries",
+       "title": "Node memory usage",
+       "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+       },
+       "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+       },
+       "targets": [
+        {
+         "expr": "1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes",
+         "legendFormat": "{{instance}}",
+         "refId": "A",
+         "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+         }
+        }
+       ],
+       "fieldConfig": {
+        "defaults": {
+         "custom": {
+          "stacking": {
+           "mode": "none"
+          }
+         },
+         "unit": "percentunit"
+        },
+        "overrides": []
+       }
+      }
+     ]
+    }
