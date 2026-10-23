@@ -1,0 +1,53 @@
+# Argo CD (Item 10): platform manifest'lerinin GitOps gorunurlugu. Yalnizca bu depo (GitLab, lab CA ile),
+# senkronizasyon elle (otomatik sync yok): Argo CD sapmayi gosterir, uygulama karari insanda kalir.
+# Dex, bildirimler ve ApplicationSet kapali. Admin sifresi Argo CD'nin urettigi argocd-initial-admin-secret'ta;
+# insan okur, degistirir ve o Secret'i siler.
+global:
+  domain: argocd.securestream.lab
+
+configs:
+  params:
+    # TLS Traefik'te sonlanir (cert-manager, lab CA)
+    server.insecure: true
+  cm:
+    admin.enabled: true
+    exec.enabled: false
+    users.anonymous.enabled: false
+    statusbadge.enabled: false
+    # Arayuz oturumu 8 saat
+    users.session.duration: 8h
+  # Lab CA sertifikasi (gizli degil) install-argocd.sh icinde --set-file ile verilir:
+  #   configs.tls.certificates.gitlab\.securestream\.lab
+
+dex:
+  enabled: false
+notifications:
+  enabled: false
+applicationSet:
+  enabled: false
+
+server:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: securestream-lab-ca
+    tls: true
+
+controller:
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 1Gi }
+
+repoServer:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+
+redis:
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 128Mi }

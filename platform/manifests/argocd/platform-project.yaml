@@ -1,0 +1,38 @@
+# Argo CD proje ve uygulamasi: platform/manifests (alt klasorler dahil, demo haric).
+# Yalnizca securestream deposu; senkronizasyon elle. Uygulama "OutOfSync" ise kumede Git'ten farkli bir sey var.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  description: SecureStream platform manifests (manual sync)
+  sourceRepos:
+    - https://gitlab.securestream.lab/securestream/securestream.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "*"
+  # Platform manifest'leri kume kapsamli kaynaklar da icerir (Namespace, ClusterRole, ClusterIssuer, policy)
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-manifests
+  namespace: argocd
+spec:
+  project: platform
+  source:
+    repoURL: https://gitlab.securestream.lab/securestream/securestream.git
+    targetRevision: main
+    path: platform/manifests
+    directory:
+      recurse: true
+      # Argo CD kendi tanimini yonetmez; demo uygulamasi kalici degil
+      exclude: "{argocd/*,demo-whoami.yaml}"
+  destination:
+    server: https://kubernetes.default.svc
+  # Otomatik senkronizasyon yok (bilincli): sapma gorunur, uygulama insan karari
+  syncPolicy: {}
