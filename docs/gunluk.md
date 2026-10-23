@@ -103,5 +103,8 @@
 - Dogrulama: gizli dosya istegi talimat katmaninda reddedildi; Read ve `head` deny kuraliyla engellendi; onerilen ek Bash kurali testle gereksiz cikti.
 - Sahte tfstate testi: Read/cat/jq engellendi, `python3 open()` okudu; proje disinda kural hic gecerli degil. Deny kurallari korkuluk, sandbox degil.
 - force-push: asil kontrol GitLab'da korumali `main` (allow_force_push=false, push/merge Maintainers). Istemci kurallari genisletildi.
-- Terraform state ss-mgmt'de sifresiz duruyordu ve 0664 izinliydi -> 0600. Sifreleme (GitLab managed state) acik is.
+- Terraform state ss-mgmt'de sifresiz duruyordu ve 0664 izinliydi -> 0600.
+- Terraform state GitLab managed state'e tasindi (http backend, GitLab Lockbox ile sifreli). Oncesinde ansible-vault ile sifreli yedek.
+  Dogrulama: 9 instance, adres + ID'ler yedekle ayni, plan exit 0. Lineage degisti: bos remote backend'e tasimada Terraform yeni lineage uretir.
+  Yeni betikler: tfstate-token.sh, tfstate-migrate.sh, tfstate-verify.sh, tfstate-cleanup.sh.
 - Gunluk basliklarindaki "Gun 2/3" etiketleri kaldirildi; yeni basliklar isi ve tarihi anlatir. Eski commit mesajlarindaki "gun" ifadeleri degistirilmedi: main korumali, gecmis yeniden yazilmaz.

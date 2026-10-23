@@ -91,7 +91,9 @@ docs/                     security controls, threat model, ADRs, runbooks, lesso
 The VMs add up to ~96 GB RAM and ~600 GB disk (vCPUs are overcommitted); this lab runs on a dual-Xeon ASUS Z10PE-D16 workstation board. The order is:
 
 1. Proxmox network (`vmbr1` + NAT), Tailscale subnet router, cloud-init golden image.
-2. `terraform apply` in `infra/terraform/proxmox` (token in environment variables, never in files).
+2. `terraform apply` in `infra/terraform/proxmox` (token in environment variables, never in files). State is kept in
+   GitLab-managed Terraform state (`backend.tf`). On a rebuild from zero GitLab does not exist yet: run the first apply
+   with `backend.tf` moved aside, then move it back and run `scripts/tfstate-token.sh` and `scripts/tfstate-migrate.sh`.
 3. Ansible: `baseline` → `infra` (DNS + CA) → `k3s` → `gitlab` → `runner` → `vault`.
 4. `platform/`: MetalLB, Traefik, cert-manager, Kyverno, Falco, External Secrets.
 5. Push `catalog-api`; the pipeline does the rest.
