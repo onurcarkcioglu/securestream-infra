@@ -1,0 +1,11 @@
+# Every Proxmox VM must be provisioned with SSH keys (key-only access).
+metadata:
+  id: "CKV2_SS_2"
+  name: "Proxmox VM cloud-init user must have SSH keys"
+  category: "IAM"
+  severity: "MEDIUM"
+definition:
+  cond_type: "attribute"
+  resource_types: ["proxmox_virtual_environment_vm"]
+  attribute: "initialization.user_account.keys"
+  operator: "exists"

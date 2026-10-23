@@ -1,0 +1,25 @@
+# Accepted risks and false positives for the platform repository. Every entry is time-boxed (max 90 days)
+# and checked in CI. Inline suppressions are not used. Schema: see docs/vulnerability-management.md.
+# Fields: id, tool, rule, path (glob, relative to the repository), reason, owner, created, expires.
+exceptions:
+  - id: EXC-0101
+    tool: checkov
+    rule: CKV_AWS_144
+    path: infra/terraform/samples/aws/secure/main.tf
+    reason: >-
+      Accepted risk for the sample: cross-region replication doubles storage cost and is a data-residency
+      decision (EU-only media). Durability comes from versioning + lifecycle; disaster recovery is out of scope
+      for this scan-only sample.
+    owner: platform-security
+    created: 2026-10-23
+    expires: 2027-01-21
+  - id: EXC-0102
+    tool: checkov
+    rule: CKV_AZURE_88
+    path: infra/terraform/samples/azure/secure/main.tf
+    reason: >-
+      Not applicable: the catalog web app is stateless and keeps no files; mounting Azure Files would add a
+      storage dependency and credentials without a security benefit.
+    owner: platform-security
+    created: 2026-10-23
+    expires: 2027-01-21
