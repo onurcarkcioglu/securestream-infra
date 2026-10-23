@@ -1,5 +1,5 @@
 # securestream-infra pipeline
-# - secret-scan:    her push'ta bu commit'in tum gecmisi gitleaks ile taranir.
+# - secret-scan:    sir yollarindaki dosyalar sifreli mi + bu commit'in tum gecmisi gitleaks ile (kapi).
 # - iac-scan:       infra/terraform (samples/*/insecure haric) Checkov + ozel kurallar; istisnasiz bulgu durdurur.
 # - iac-scan-insecure: kasitli guvensiz bulut ornekleri; yakalanan kurallari listeler, kapi degil.
 # - publish-github: yalnizca main. Secret dosyalari (sifreli olsalar bile) TUM gecmisten cikarilir,
@@ -28,9 +28,11 @@ secret-scan:
     GIT_DEPTH: "0"
     GIT_STRATEGY: clone
   script:
+    # Sir yollarindaki her dosya Ansible Vault ile sifreli olmali (yalnizca baslik okunur, icerik basilmaz).
+    - sh scripts/check-vault-encrypted.sh
+    # Kapi: bulgu pipeline'i durdurur. Sifreli vault dosyalari icin allowlist yok; bugune kadar bulgu
+    # vermediler. Gercek bir yanlis pozitif cikarsa .gitleaks.toml'a kanitla ve yalnizca o yol eklenir.
     - gitleaks git --log-opts="$CI_COMMIT_SHA" --redact .
-  # Ozel repoda sifreli Ansible Vault dosyalari var; asil kapi publish-github'daki temiz kopya taramasi.
-  allow_failure: true
 
 .checkov:
   stage: scan
@@ -57,9 +59,8 @@ iac-scan-insecure:
 
 publish-github:
   stage: publish
-  # IaC kapisi kirmiziysa yayin yapilmaz. secret-scan bilerek beklenmez (allow_failure, bkz. yorum);
-  # yayinin kendi temiz kopya taramasi asil secret kapisidir.
-  needs: [iac-scan]
+  # Iki kapi da yesil olmadan yayin yapilmaz; yayinin kendi temiz kopya taramasi ek bir kapidir.
+  needs: [secret-scan, iac-scan]
   image:
     name: $GITLEAKS_IMAGE
     entrypoint: [""]

@@ -135,3 +135,8 @@
 - Checkov'da bpg/proxmox icin kural yok (0 kontrol): `security/checkov` altinda ozel kurallar (18 kontrol).
 - GCP default service account data source ile yakalanmiyordu: ozel Python kurali CKV_SS_3.
 - Istisnalar: EXC-0101 (S3 cross-region replication), EXC-0102 (App Service Azure Files), 2027-01-21'e kadar.
+
+## secret-scan kapi oldu (2026-10-23)
+- securestream `secret-scan`: `allow_failure: true` kaldirildi (8c8c8a0'dan beri vardi). Tam gecmiste bulgu yok, allowlist eklenmedi.
+- `scripts/check-vault-encrypted.sh`: sir yollarindaki her dosya `$ANSIBLE_VAULT` basligiyla baslamali (yalnizca baslik okunur).
+- `publish-github` artik `needs: [secret-scan, iac-scan]`.
