@@ -13,6 +13,7 @@ lab_service_records:
   registry: 10.10.10.10
   sonar: 10.10.10.12
   dojo: 10.10.10.12
+  defectdojo: 10.10.10.12
   dtrack: 10.10.10.12
   vault: 10.10.10.13
 

@@ -1,0 +1,119 @@
+# Ansible tarafindan yonetilir (roles/defectdojo). Elle duzenleme.
+# Kaynak: DefectDojo {{ defectdojo_version }} resmi docker-compose.yml. Farklar:
+#  - imajlar digest ile, build yok; dd-nginx yalnizca 127.0.0.1:8080 (TLS host nginx'te, 443)
+#  - gizli degerler kod icindeki varsayilanlar yerine 0600 env dosyalarindan; admin sifresi yalnizca initializer'da
+#    (verilmezse initializer sifreyi uretir ve konteyner loguna yazar)
+#  - DD_DATABASE_URL yerine ayri alanlar (sifre URL icinde kodlanmaz)
+name: defectdojo
+
+x-dojo-env: &dojo-env
+  DD_DEBUG: "False"
+  DD_ALLOWED_HOSTS: "{{ defectdojo_hostname }}"
+  DD_SITE_URL: "https://{{ defectdojo_hostname }}"
+  DD_CSRF_TRUSTED_ORIGINS: "https://{{ defectdojo_hostname }}"
+  DD_SESSION_COOKIE_SECURE: "True"
+  DD_CSRF_COOKIE_SECURE: "True"
+  DD_SECURE_PROXY_SSL_HEADER: "True"
+  DD_API_TOKEN_DEFAULT_EXPIRY_DAYS: "{{ defectdojo_token_expiry_days }}"
+  DD_API_TOKEN_AUTH_ENDPOINT_ENABLED: "False"
+  DD_DATABASE_ENGINE: django.db.backends.postgresql
+  DD_DATABASE_HOST: postgres
+  DD_DATABASE_PORT: "5432"
+  DD_DATABASE_NAME: defectdojo
+  DD_DATABASE_USER: defectdojo
+  DD_CELERY_BROKER_URL: redis://valkey:6379/0
+  DD_CACHE_URL: redis://valkey:6379/1
+  DD_DATABASE_READINESS_TIMEOUT: "30"
+
+x-dojo: &dojo
+  image: "{{ defectdojo_django_image }}"
+  restart: unless-stopped
+  env_file: [defectdojo.env]
+  volumes:
+    - ./extra_settings:/app/docker/extra_settings:ro
+    - defectdojo_media:/app/media
+  depends_on:
+    initializer:
+      condition: service_completed_successfully
+    postgres:
+      condition: service_healthy
+    valkey:
+      condition: service_started
+
+services:
+  nginx:
+    image: "{{ defectdojo_nginx_image }}"
+    restart: unless-stopped
+    depends_on:
+      uwsgi:
+        condition: service_started
+    environment:
+      NGINX_METRICS_ENABLED: "false"
+      DD_UWSGI_HOST: uwsgi
+      DD_UWSGI_PORT: "3031"
+    volumes:
+      - defectdojo_media:/usr/share/nginx/html/media
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  uwsgi:
+    <<: *dojo
+    entrypoint: ["/wait-for-it.sh", "postgres:5432", "-t", "30", "--", "/entrypoint-uwsgi.sh"]
+    environment:
+      <<: *dojo-env
+
+  celerybeat:
+    <<: *dojo
+    entrypoint: ["/wait-for-it.sh", "postgres:5432", "-t", "30", "--", "/entrypoint-celery-beat.sh"]
+    environment:
+      <<: *dojo-env
+
+  celeryworker:
+    <<: *dojo
+    entrypoint: ["/wait-for-it.sh", "postgres:5432", "-t", "30", "--", "/entrypoint-celery-worker.sh"]
+    environment:
+      <<: *dojo-env
+
+  initializer:
+    image: "{{ defectdojo_django_image }}"
+    env_file: [defectdojo.env, initializer.env]
+    entrypoint: ["/wait-for-it.sh", "postgres:5432", "--", "/entrypoint-initializer.sh"]
+    environment:
+      <<: *dojo-env
+      DD_ADMIN_USER: "{{ defectdojo_admin_user }}"
+      DD_ADMIN_MAIL: "{{ defectdojo_admin_mail }}"
+      DD_ADMIN_FIRST_NAME: Admin
+      DD_ADMIN_LAST_NAME: User
+      DD_INITIALIZE: "true"
+    volumes:
+      - ./extra_settings:/app/docker/extra_settings:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: "{{ defectdojo_postgres_image }}"
+    restart: unless-stopped
+    env_file: [postgres.env]
+    environment:
+      PGDATA: /var/lib/postgresql/data
+      POSTGRES_DB: defectdojo
+      POSTGRES_USER: defectdojo
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U defectdojo -d defectdojo"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - defectdojo_postgres:/var/lib/postgresql/data
+
+  valkey:
+    image: "{{ defectdojo_valkey_image }}"
+    restart: unless-stopped
+    volumes:
+      - defectdojo_redis:/data
+
+volumes:
+  defectdojo_postgres: {}
+  defectdojo_media: {}
+  defectdojo_redis: {}

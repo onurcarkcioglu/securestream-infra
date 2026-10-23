@@ -1,0 +1,5 @@
+---
+# Once sozdizimi testi: bozuk ayar calisan nginx'i durdurmaz, handler kirmizi olur
+- name: reload nginx
+  ansible.builtin.shell: nginx -t && systemctl reload nginx
+  when: not ansible_check_mode

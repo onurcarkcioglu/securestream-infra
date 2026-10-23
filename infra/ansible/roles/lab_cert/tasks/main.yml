@@ -9,6 +9,13 @@
     path: "{{ lab_cert_dir }}"
     state: directory
     mode: "0755"
+  register: lab_cert_dir_result
+
+# Yeni sunucuda check modunda klasor gercekte olusmaz; anahtar/CSR adimlari calisamaz.
+# Rol burada biter: dry run temiz kalir, gercek calismada her sey uretilir.
+- name: Check modu, klasor henuz yok - sertifika adimlari atlanir
+  ansible.builtin.meta: end_role
+  when: ansible_check_mode and lab_cert_dir_result is changed
 
 # Özel anahtar bu sunucuda üretilir ve buradan hiç çıkmaz
 - name: "Özel anahtar ({{ lab_cert_name }})"

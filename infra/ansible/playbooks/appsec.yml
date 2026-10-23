@@ -1,0 +1,7 @@
+---
+- name: AppSec sunucusu (ss-sec) - DefectDojo
+  hosts: security
+  become: true
+  roles:
+    - appsec_host
+    - defectdojo

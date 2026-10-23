@@ -1,0 +1,6 @@
+---
+# SonarQube'un (Elasticsearch) en az istedigi deger; cekirdek daha yuksekse dusurulmez.
+appsec_vm_max_map_count_min: 524288
+appsec_fs_file_max: 131072
+appsec_nofile: 131072
+appsec_nproc: 8192

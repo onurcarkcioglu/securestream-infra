@@ -1,0 +1,12 @@
+---
+defectdojo_dir: /opt/defectdojo
+defectdojo_admin_user: admin
+# lab_cert rolunun varsayilan klasoru (include_role degiskenleri disari acmaz)
+defectdojo_cert_dir: /etc/ssl/lab
+defectdojo_admin_mail: "admin@{{ lab_domain }}"
+# API token'lari 90 gunde sona erer (0 = hic); CI token'i scripts/defectdojo-ci-token.sh ile yenilenir
+defectdojo_token_expiry_days: 90
+# Yuklenen tarama raporlari (ZAP, Trivy) icin
+defectdojo_max_upload: 100m
+# Ilk acilista migration'lar suruyor: 60 x 10 sn
+defectdojo_wait_retries: 60
