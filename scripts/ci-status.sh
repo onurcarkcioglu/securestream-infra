@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# GitLab pipeline durumu ve is logu (salt okunur). Claude Code'da onaysiz calisir (allow kurali);
-# bu yuzden argumanlar siki dogrulanir: gitlab-rails runner root yetkisiyle Ruby calistirir,
+# GitLab pipeline durumu ve is logu (salt okunur). Kaynak: scripts/ci-status.sh. Onayli kopya
+# /usr/local/bin/ci-status (root:root 0755); Claude Code'da yalnizca o mutlak yol onaysiz calisir.
+# Kopyayi guncellemek insanin isidir (sudo install ...), bkz. CLAUDE.md.
+# Argumanlar siki dogrulanir: gitlab-rails runner root yetkisiyle Ruby calistirir,
 # dogrulanmamis girdi kod enjeksiyonu olurdu. Betik yalnizca okur (find_by, order, trace.raw).
 # Kullanim:
-#   scripts/ci-status.sh <grup/proje>                 son pipeline: id, sha, durum, isler
-#   scripts/ci-status.sh <grup/proje> <is> [satir]    son pipeline'daki isin logunun son N satiri (vars. 40, en cok 500)
-#   PIPELINE=<id> scripts/ci-status.sh ...            son yerine belirli bir pipeline
+#   ci-status <grup/proje>                            son pipeline: id, sha, durum, isler
+#   ci-status <grup/proje> <is> [satir]               son pipeline'daki isin logunun son N satiri (vars. 40, en cok 500)
+#   PIPELINE=<id> ci-status ...                       son yerine belirli bir pipeline
 set -euo pipefail
 GITLAB=ubuntu@10.10.10.10
 fail() { echo "HATA: $*" >&2; exit 2; }

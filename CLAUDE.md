@@ -51,11 +51,16 @@ Lab CA: `infra/ansible/files/securestream-root-ca.crt` (use it as `--cacert` / `
 5. **Never**: force-push, rewrite shared history (the publish job is the only exception), touch Tailscale on pve1,
    open router ports, enable Tailscale Funnel, run `do-release-upgrade`.
 6. Every AI-made change goes through the same gates as a human change, and the commit history must show it.
+7. **Allow-listed scripts are immutable for the assistant.** `/usr/local/bin/ci-status` (root:root 0755) is the
+   approved copy of `scripts/ci-status.sh` and the only command allowed without a prompt. Updating it happens only
+   with the human's approval (`sudo install -o root -g root -m 0755 scripts/ci-status.sh /usr/local/bin/ci-status`,
+   then compare `sha256sum` of both). Never create a file named `ci-status` elsewhere on `PATH`, and never widen the
+   allow rule to a bare command name (`~/.local/bin` comes first on `PATH` and is user-writable).
 
 ## Useful commands
 ```bash
 # Last pipeline of a project (read-only, no approval needed; job log: add `<job> [lines]`)
-scripts/ci-status.sh securestream/catalog-api
+/usr/local/bin/ci-status securestream/catalog-api
 # Same via raw gitlab-rails (asks for ssh approval)
 ssh ubuntu@10.10.10.10 'sudo gitlab-rails runner "p = Project.find_by_full_path(%q(securestream/catalog-api)).ci_pipelines.order(:id).last; puts p.id.to_s + %q( ) + p.status; p.builds.order(:id).each { |b| puts b.name.ljust(14) + b.status }"'
 # Vault sealed after a reboot

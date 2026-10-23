@@ -122,3 +122,7 @@
   Claude Code'da `allow: Bash(scripts/ci-status.sh *)`; `ask: Bash(ssh *)` degismedi.
 - Girdi siki dogrulanir (gitlab-rails runner root yetkisiyle Ruby calistirir); enjeksiyon denemeleri reddedildi.
 - Cikti maskelenir: ilk denemede artifact yukleme satirinda job JWT oneki gorundu.
+- Onayli kopya: `/usr/local/bin/ci-status` (root:root 0755, insan `sudo install` ile kurdu). Allow kurali yalnizca bu
+  mutlak yol; `~/.local/bin` PATH'te once ve yazilabilir oldugu icin ciplak ad kurali kullanilmadi.
+  `Edit/Write(scripts/ci-status.sh)` deny. Yazma denemeleri (test -w, python3) Permission denied.
+- `scripts/catalog-admin-smoke.sh`: admin uc noktasi 401/401/200 testi; anahtar Vault'tan stdin ile curl'e, insan calistirir.
