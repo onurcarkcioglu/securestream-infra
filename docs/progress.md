@@ -36,7 +36,7 @@ Order kept as in the brief. Docker is not yet installed on ss-sec (Item 4 `appse
   Until then use `-o wide` / `-o custom-columns`. In Item 8, after `can-i` tests with the `claude-readonly` kubeconfig,
   remove them and record in lessons learned: "the boundary moved from text matching to RBAC".
 - Remote branch `ci/hadolint-checkov` (catalog-api, merged) still exists; deleting it is left to the human.
-| 3 Multi-cloud IaC scanning | Done (pending pipeline) | see `git log -- infra/terraform/samples` | Local: `iac-scan.sh gate` 4 modules (proxmox 18, aws 38, azure 40, gcp 24 checks), 0 blocking, 2 excepted; negative copy of aws/insecure in scope → 25 blocking, exit 1; `report`: AWS 25, Azure 30, GCP 11 findings, all 10 expected rules caught |
+| 3 Multi-cloud IaC scanning | Done | `2f8c266`, `d2a950c`, `f82ac12` | Branch pipelines 41 and 43 green (`iac-scan`, `iac-scan-insecure`); | Local: `iac-scan.sh gate` 4 modules (proxmox 18, aws 38, azure 40, gcp 24 checks), 0 blocking, 2 excepted; negative copy of aws/insecure in scope → 25 blocking, exit 1; `report`: AWS 25, Azure 30, GCP 11 findings, all 10 expected rules caught |
 
 - Resolved (human decision): `secret-scan` in this repository had `allow_failure: true` (since `8c8c8a0`). Now a
   blocking gate, and `publish-github` needs it. Deviation from the approved plan: **no** `.gitleaks.toml` allowlist,
@@ -44,3 +44,24 @@ Order kept as in the brief. Docker is not yet installed on ss-sec (Item 4 `appse
   a future plain-text secret on those paths. The requested `$ANSIBLE_VAULT` check was added
   (`scripts/check-vault-encrypted.sh`, same path patterns as the publish filter; tested with fake files: plain-text
   file → FAIL, no files → FAIL).
+| 2b secret-scan gate (human request) | Done | `077019f`, `a6433f1` | Pipeline 43: vault check 4/4 OK (3 per-variable, 1 whole file), gitleaks 52 commits, no leaks; `allow_failure` removed; first version of the check failed on per-variable encryption (fixed, see ai-assisted-engineering) |
+
+## Handoff (session stopped on request, 2026-10-23)
+
+Next order (human decision): **Item 5 (DefectDojo) → Item 4 (SonarQube) → Item 8 (read-only kubeconfig)**;
+Items 6, 7, 9, 10 only if the weekly limit allows.
+
+Open for the human:
+1. Run `scripts/catalog-admin-smoke.sh` (needs `vault login`): expects 401 / 401 / 200. The assistant verified 401 and
+   401 only (no Vault token by design).
+2. Remote branch `ci/hadolint-checkov` (catalog-api, merged) and `feat/iac-scan` (securestream, merged): delete or keep.
+3. pve1 total RAM/CPU: read in the Proxmox UI (token has no `Sys.Audit`), see capacity report.
+
+Notes for the next session:
+- Local scanners were installed in the session scratchpad and are gone: hadolint v2.15.1 (verify with the release's
+  `checksums.sha256`), `pip install checkov==3.3.26` in a venv. CI images are pinned (catalog-api `.gitlab-ci.yml`).
+- `scripts/scan-gate.py` exists in both repositories (identical); Item 6 makes securestream the single source.
+- Item 5 must import hadolint (`hadolint.json`), checkov (`checkov-helm.json`, `iac-reports/*.json`) and use
+  `security/exceptions.yaml` of each repository for the Risk Acceptances.
+- `kubectl -o yaml/json` deny rules stay until Item 8 (human decision, see notes above).
+- Pipeline status without ssh approval: `/usr/local/bin/ci-status <group/project> [job] [lines]`.
