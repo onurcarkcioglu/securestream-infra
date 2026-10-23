@@ -27,6 +27,7 @@ gaps are listed openly with the planned fix. Evidence links point to the build l
 | **PS.1** Protect all forms of code | Protected branches, gitleaks on full history, signed-off public mirror without secrets |
 | **PS.2** Verify software release integrity | cosign signatures verified by Kyverno; public key published in the application repository |
 | **PS.3** Archive and protect each release | Image + CycloneDX SBOM attestation stored next to the image in the registry |
+| **PW.1/PW.2** Design to meet security requirements, review the design | IaC gate `iac-scan` (Checkov + custom Proxmox rules) on all Terraform; scan-only AWS/Azure/GCP samples prove which cloud misconfigurations are caught |
 | **PW.4** Reuse well-secured software | SCA (Trivy fs) on dependencies; base image by digest; HIGH/CRITICAL fixable CVEs block the build |
 | **PW.6** Configure build processes securely | Multi-stage Dockerfile, non-root user, build without privileged containers; hadolint gates every Dockerfile change (`hadolint` job) |
 | **PW.7** Review / analyse code | Semgrep (`p/python`, `p/owasp-top-ten`) and ruff bandit rules on every commit |

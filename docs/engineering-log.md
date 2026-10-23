@@ -126,3 +126,12 @@
   mutlak yol; `~/.local/bin` PATH'te once ve yazilabilir oldugu icin ciplak ad kurali kullanilmadi.
   `Edit/Write(scripts/ci-status.sh)` deny. Yazma denemeleri (test -w, python3) Permission denied.
 - `scripts/catalog-admin-smoke.sh`: admin uc noktasi 401/401/200 testi; anahtar Vault'tan stdin ile curl'e, insan calistirir.
+
+## Cok bulutlu IaC taramasi (2026-10-23)
+- `infra/terraform/samples/{aws,azure,gcp}/{insecure,secure}`: yalnizca taranir; init/plan/apply yok, bulut hesabi yok.
+- `scripts/iac-scan.sh gate|report` + CI isleri `iac-scan` (kapi) ve `iac-scan-insecure` (rapor). publish-github artik iac-scan'i bekler.
+- Checkov 3.3.26 hatalari: Terraform'da `--skip-path` gecersiz regex; birden fazla `-d` ayni dizini tekrar tarar ve basarili gorunur.
+  Cozum: dizin basina ayri calistirma + bos rapor kirmizi.
+- Checkov'da bpg/proxmox icin kural yok (0 kontrol): `security/checkov` altinda ozel kurallar (18 kontrol).
+- GCP default service account data source ile yakalanmiyordu: ozel Python kurali CKV_SS_3.
+- Istisnalar: EXC-0101 (S3 cross-region replication), EXC-0102 (App Service Azure Files), 2027-01-21'e kadar.

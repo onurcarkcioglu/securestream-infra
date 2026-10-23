@@ -64,7 +64,7 @@ flowchart TB
 |---|---|---|
 | Access | No port forwarding; Tailscale + bastion; key-only SSH with `AllowUsers` | CGNAT made port forwarding impossible — turned into a design choice ([ADR-0001](docs/adr/0001-tailscale-instead-of-port-forwarding.md)) |
 | PKI | Two-tier private CA; root restricted by **name constraints** to `securestream.lab` and 10.10.10.0/24 | A leaked intermediate cannot sign `google.com` |
-| IaC | Terraform (least-privilege Proxmox API token), Ansible roles, `--check --diff` before apply, second run `changed=0` | Idempotency checked for every role |
+| IaC | Terraform (least-privilege Proxmox API token), Ansible roles, `--check --diff` before apply, second run `changed=0`; Checkov gate `iac-scan` with custom Proxmox rules | Idempotency checked for every role; deliberately insecure AWS/Azure/GCP samples are caught (below) |
 | Supply chain | CI tools pinned **by digest**, ~2-week cool-down, cosign signatures, signed CycloneDX SBOM | Motivated by the March 2026 Trivy compromise (CVE-2026-33634) |
 | Admission | Kyverno `ImageValidatingPolicy`: images from our registry must carry our signature | An unsigned image in our own registry is rejected |
 | Workload | Pod Security `restricted`, non-root, read-only rootfs, no capabilities, NetworkPolicy with **no egress** | `kubectl auth can-i` and network tests in the docs |
@@ -75,14 +75,47 @@ flowchart TB
 Full mapping to **OWASP Top 10 CI/CD Security Risks, NIST SSDF (SP 800-218), SLSA and CIS Kubernetes**:
 [docs/security-controls.md](docs/security-controls.md). Threat model: [docs/threat-model.md](docs/threat-model.md).
 
+## Cloud IaC security without cloud accounts
+
+The lab runs on-prem, but the same IaC controls are exercised for AWS, Azure and Google Cloud with
+**scan-only** Terraform samples in [`infra/terraform/samples`](infra/terraform/samples). Nothing is ever
+initialised, planned or applied there, so no cloud account or credential is involved.
+
+| Cloud | `insecure/` (must be caught) | `secure/` (must pass the gate) |
+|---|---|---|
+| AWS | public, unencrypted S3 bucket; security group with SSH from `0.0.0.0/0`; IAM policy `"Action": "*"` | public access block, KMS encryption with rotation, versioning, logging; SSH from the VPN range only, SG attached; IAM limited to ECR push on one repository |
+| Azure | storage account with public blob access and TLS 1.0; NSG with SSH/RDP from `*`; web app without HTTPS | no public/shared-key access, private endpoint, customer-managed key, TLS 1.2; NSG from the VPN range; HTTPS only, TLS 1.2, AAD auth, managed identity |
+| GCP | bucket readable by `allUsers`; firewall SSH from `0.0.0.0/0`; VM on the default service account | uniform access + public access prevention; SSH only from IAP; dedicated service account, Shielded VM, OS Login, CMEK disk |
+
+Two CI jobs (`scripts/iac-scan.sh`, Checkov 3.3.26 pinned by digest):
+
+- **`iac-scan`** (gate): every Terraform module except `samples/*/insecure` is scanned on its own; a finding
+  without a valid entry in [`security/exceptions.yaml`](security/exceptions.yaml), or a module with zero checks,
+  fails the pipeline and blocks the GitHub publication. Two accepted risks in the samples are recorded there.
+- **`iac-scan-insecure`** (report, not a gate): lists every rule caught in the insecure samples and confirms the
+  expected ones (AWS 25 findings, Azure 30, GCP 11 including the custom rule below).
+
+What the scanner did not do on its own, and how it was closed:
+
+- Checkov has **no rules for `bpg/proxmox`**: the real on-prem Terraform got 0 checks. Custom rules in
+  [`security/checkov`](security/checkov): provider must not set `insecure = true` or hold inline credentials,
+  VMs must use SSH keys and no cloud-init password (18 checks; a broken copy fails all 18).
+- Checkov catches the GCP default service account only as a literal e-mail; through
+  `data.google_compute_default_service_account` it is missed. Custom rule `CKV_SS_3` closes the gap.
+- In Checkov 3.3.26, `--skip-path` builds an invalid regex for Terraform and several `-d` flags rescan the same
+  directory while reporting success. The script therefore scans one directory per run
+  ([lessons learned #21](docs/lessons-learned.md)).
+
 ## Repository layout
 
 ```
 infra/terraform/proxmox   VM definitions (bpg/proxmox provider), generated Ansible inventory
+infra/terraform/samples   scan-only AWS/Azure/GCP samples: insecure/ (must be caught), secure/ (must pass)
+security/                 exceptions.yaml (time-boxed accepted risks), checkov/ (custom rules)
 infra/ansible             roles: baseline, dns_server, dns_client, lab_ca, ca_trust, lab_cert,
                           k3s, gitlab, gitlab_runner, vault  ·  playbooks/  ·  inventory/
 platform/                 Helm values, Kubernetes manifests, Vault policies, pinned versions
-scripts/                  operational scripts (e.g. vault-unseal.sh)
+scripts/                  operational scripts (e.g. vault-unseal.sh, iac-scan.sh, scan-gate.py, ci-status.sh)
 docs/                     security controls, threat model, ADRs, runbooks, lessons learned, build log
 ```
 

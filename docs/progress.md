@@ -36,3 +36,9 @@ Order kept as in the brief. Docker is not yet installed on ss-sec (Item 4 `appse
   Until then use `-o wide` / `-o custom-columns`. In Item 8, after `can-i` tests with the `claude-readonly` kubeconfig,
   remove them and record in lessons learned: "the boundary moved from text matching to RBAC".
 - Remote branch `ci/hadolint-checkov` (catalog-api, merged) still exists; deleting it is left to the human.
+| 3 Multi-cloud IaC scanning | Done (pending pipeline) | see `git log -- infra/terraform/samples` | Local: `iac-scan.sh gate` 4 modules (proxmox 18, aws 38, azure 40, gcp 24 checks), 0 blocking, 2 excepted; negative copy of aws/insecure in scope → 25 blocking, exit 1; `report`: AWS 25, Azure 30, GCP 11 findings, all 10 expected rules caught |
+
+- Open risk (pre-existing, not changed): `secret-scan` in this repository has `allow_failure: true` (since `8c8c8a0`,
+  reason: encrypted Ansible Vault files); the real secret gate is the clean-copy scan in `publish-github`.
+  Proposal for Item 6 (`secret-scan.yml`): a `.gitleaks.toml` path allowlist for the encrypted vault files, then
+  remove `allow_failure`. Decision for the human.
