@@ -51,6 +51,22 @@ Order kept as in the brief. Docker is not yet installed on ss-sec (Item 4 `appse
   `:*` is Claude Code's legacy prefix syntax); replaced by `Bash(git push * :**)`, which blocks it. Evidence: verification
   log in `docs/ai-assisted-engineering.md`, lessons learned #23.
 
+| 5 DefectDojo + vulnerability management | Done (one check open, see notes) | `5f9be86`, `584ac3c`, `7a23241`, `eeba99e`, `a014fc3`, `3b5929a`; catalog-api `4950184`, `b16fad8`, `ca60383`, `e695db2` | `appsec.yml` second run `changed=0`; TLS: lab CA only (public-CA test fails with isolated `capath`), TLS 1.0/1.1 refused server-side, unknown SNI refused, ports 80/8080 closed; admin password 0 lines in container log. Pipelines 51 + 52 green: 7 + 4 reports reimported, Risk Acceptances `catalog-api:EXC-0001` (4 findings), `securestream-platform:EXC-0101/0102` (1 each), all `risk_accepted`, expire 2027-01-21. `exceptions-check` negative tests: expired, > 90 days, duplicate id, missing field, unknown tool, future date, bad date → exit 1. `DD_API_KEY`: length 40, protected/masked/hidden (set by the human with `defectdojo-ci-token.sh`) |
+
+### Item 5 notes (2026-10-23)
+
+- Deviation: no per-product role `API_Importer`. DefectDojo 3.x OSS has no RBAC (moved to Pro); CI user `gitlab-ci` is
+  non-staff in `authorized_users` (view/add/edit/import, no delete). Lessons learned #24.
+- Deviation: DefectDojo versions pinned in `group_vars/security/main.yml` (like `gitlab_version`), not in
+  `platform/versions.conf`, which feeds `platform/install.sh` for k3s.
+- Open check: `trivy-image` churn fix (`3b5929a`/`e695db2`). The first pipeline after it still churns once (old findings
+  carry the digest path); the next catalog-api pipeline must show `trivy-image … created=0 closed=0`. To be checked
+  on the first Item 4 pipeline.
+- Admin login: user `admin`, password in `infra/ansible/inventory/group_vars/security/vault.yml`
+  (`vault_dd_admin_password`, ansible-vault). The value was never shown.
+- CI token expires after 90 days (all DefectDojo API tokens): rotate with `scripts/defectdojo-ci-token.sh` before 2027-01-21.
+- Not done: DefectDojo backup (PostgreSQL volume), recorded in `docs/vulnerability-management.md` as roadmap.
+
 ## Handoff (session stopped on request, 2026-10-23)
 
 Next order (human decision): **Item 5 (DefectDojo) → Item 4 (SonarQube) → Item 8 (read-only kubeconfig)**;
