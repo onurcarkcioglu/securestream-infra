@@ -27,7 +27,8 @@ Lab CA: `infra/ansible/files/securestream-root-ca.crt` (use it as `--cacert` / `
 - Multi-step operations become scripts with `set -euo pipefail`, explicit handling of expected failures,
   and a verification step that fails loudly with details.
 - Versions are pinned (`platform/versions.conf`); CI tool images by digest; adopt new releases after ~2 weeks.
-- Commits: conventional prefixes (`feat`, `fix`, `docs`, `ci`, `chore`). Record notable changes in
+- Commits: one conventional prefix per commit (`feat`, `fix`, `docs`, `ci`, `chore`; no `docs+ci`). No day or
+  sprint labels in commit messages or new `docs/gunluk.md` headings: the message describes the change. Record notable changes in
   `docs/gunluk.md`; incidents and their root causes in `docs/lessons-learned.md`.
 - `main` is published to GitHub by the `publish-github` job (history rewritten without secret files).
 

@@ -14,8 +14,10 @@
       "Bash(ansible-vault decrypt *)",
       "Bash(ansible-vault edit *)",
       "Bash(vault kv get *)",
-      "Bash(git push --force *)",
-      "Bash(git push -f *)",
+      "Bash(git push *--force*)",
+      "Bash(git push *-f *)",
+      "Bash(git push *-f)",
+      "Bash(git push *+*)",
       "Bash(terraform destroy *)"
     ],
     "ask": [

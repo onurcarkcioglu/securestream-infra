@@ -22,7 +22,7 @@
 
 **Sorunlar ve çözümler:**
 - Uzun heredoc yapıştırmaları terminal ekranını bozdu. Dosyalar grep/tail ile doğrulandı.
-- Plan dosyası (tfplan) yanlışlıkla commit edildi. Push edilmeden önce --amend ile çıkarıldı, .gitignore'a eklendi. Sprint 3'te pre-commit ile otomatik engellenecek.
+- Plan dosyası (tfplan) yanlışlıkla commit edildi. Push edilmeden önce --amend ile çıkarıldı, .gitignore'a eklendi. pre-commit ile otomatik engelleme yol haritasında (henüz kurulmadı).
 - Uzun süren apply için tmux kullanıldı (SSH koparsa iş devam eder).
 
 **Öğrendiklerim:** plan ve apply ayrı adımlar olmalı; plan önce okunur, sonra uygulanır.
@@ -79,7 +79,7 @@
 - Ders: requests 2.19.1 idna cakismasi lint ve test'i pip install asamasinda dusurdu; lint guvenlik kontrolu korlesti.
   Duzeltme: lint yalnizca sabit ruff kurar. Tekrar testte ruff S602'yi kendi basina yakaladi.
 
-## Gun 2 - DAST ve runtime (2026-10-22)
+## DAST ve runtime guvenligi (2026-10-22)
 - catalog.securestream.lab DNS kaydi (ingress 10.10.10.100).
 - DAST: OWASP ZAP API taramasi deploy sonrasi; zap-rules.tsv'deki XSS/SQLi/komut enjeksiyonu kurallari FAIL, digerleri WARN (allow_failure exit 2).
 - Ilk tarama: 3 WARN (X-Content-Type-Options, HSTS, CORP). Duzeltme: guvenlik basliklari middleware + test + uvicorn --no-server-header.
@@ -87,7 +87,7 @@
 - Falco (chart 9.2.1, modern eBPF): container plugin k3s soketini buldu.
 - Ders: kubectl exec -t, -i olmadan TTY acmaz; "Terminal shell in container" kurali bu yuzden tetiklenmedi. -it ile alarm geldi.
 
-## Gun 3 - HashiCorp Vault + External Secrets (2026-10-22)
+## HashiCorp Vault + External Secrets (2026-10-22)
 - Vault 2.1.2 (ss-vault): TLS (lab CA), Raft, file audit, kv-v2. Init 5/3 Shamir; cikti ekrana basilmadan ansible-vault ile sifrelendi.
 - scripts/vault-unseal.sh: 3 anahtar bellekte cozulur, API'ye stdin ile gider.
 - Kubernetes auth: token reviewer SA (system:auth-delegator); rol catalog -> SA catalog-eso, ns catalog, audience vault, policy catalog-read (yalnizca okuma).
@@ -96,3 +96,12 @@
 - Kurulum bitince root token iptal edildi; gerekirse unseal anahtarlariyla 'vault operator generate-root'.
 - Ders: yanlislikla eski terminal kaydi yapistirildi; istenmeyen commit git revert ile geri alindi (force push yok).
 - Ders: GitHub token sohbete yazildi -> hemen silindi ve yenilendi; token girisi artik bicim kontrollu (github_pat_ + uzunluk).
+
+## Claude Code kurulumu ve dogrulama (2026-10-23)
+- ss-mgmt kvm64 CPU tipindeydi (SSE4.2 yok), Claude Code (Bun) calismadi. ss-gitlab ile karsilastirilarak bulundu; pve1'de `qm set 104 --cpu host`.
+- Claude Code: `.claude/settings.json` (deny/ask kurallari), `CLAUDE.md` (proje kurallari), `docs/ai-assisted-engineering.md`.
+- Dogrulama: gizli dosya istegi talimat katmaninda reddedildi; Read ve `head` deny kuraliyla engellendi; onerilen ek Bash kurali testle gereksiz cikti.
+- Sahte tfstate testi: Read/cat/jq engellendi, `python3 open()` okudu; proje disinda kural hic gecerli degil. Deny kurallari korkuluk, sandbox degil.
+- force-push: asil kontrol GitLab'da korumali `main` (allow_force_push=false, push/merge Maintainers). Istemci kurallari genisletildi.
+- Terraform state ss-mgmt'de sifresiz duruyordu ve 0664 izinliydi -> 0600. Sifreleme (GitLab managed state) acik is.
+- Gunluk basliklarindaki "Gun 2/3" etiketleri kaldirildi; yeni basliklar isi ve tarihi anlatir. Eski commit mesajlarindaki "gun" ifadeleri degistirilmedi: main korumali, gecmis yeniden yazilmaz.
