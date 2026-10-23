@@ -25,6 +25,7 @@ import fnmatch
 import http.client
 import json
 import os
+import re
 import ssl
 import sys
 import urllib.parse
@@ -118,6 +119,18 @@ def normalise(path: str, base: str) -> str:
     return str(Path(base) / rel)
 
 
+CHECK_ID = re.compile(r"^Check Id: (\S+)$", re.MULTILINE)
+
+
+def finding_rules(finding: dict) -> set[str]:
+    """Rule ids a finding can be matched by. Parsers store them in different fields:
+    Checkov only in the description ("Check Id: CKV_..."), Trivy as vulnerability ids (CVE)."""
+    rules = {finding.get("vuln_id_from_tool"), finding.get("unique_id_from_tool")}
+    rules.update(v.get("vulnerability_id") for v in finding.get("vulnerability_ids") or [])
+    rules.update(CHECK_ID.findall(finding.get("description") or ""))
+    return {r for r in rules if r}
+
+
 def parse_report(spec: str) -> dict:
     label, _, rest = spec.partition("=")
     file, _, base = rest.partition("@")
@@ -191,9 +204,8 @@ def sync_exceptions(api: Api, args: argparse.Namespace, tests: list[tuple[dict, 
             if rep["tool"] != exc["tool"]:
                 continue
             for f in api.all("/findings/", test=test):
-                rule = f.get("vuln_id_from_tool") or ""
                 path = normalise(f.get("file_path") or "", rep["base"])
-                if rule == exc["rule"] and fnmatch.fnmatch(path, exc["path"]):
+                if exc["rule"] in finding_rules(f) and fnmatch.fnmatch(path, exc["path"]):
                     ids.append(f["id"])
         ra = existing.get(name)
         if ra is None and not ids:

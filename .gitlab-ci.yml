@@ -125,6 +125,8 @@ defectdojo-upload:
       ARGS=""
       for f in iac-reports/*.json; do
         [ -e "$f" ] || continue
-        ARGS="$ARGS --report checkov-$(basename "$f" .json)=$f"
+        name=$(basename "$f" .json)
+        # Checkov yollari taranan modul dizinine gore (/main.tf): BASE = rapor adindan dizin
+        ARGS="$ARGS --report checkov-$name=$f@$(echo "$name" | tr _ /)"
       done
       python3 scripts/defectdojo-upload.py --url "$DD_URL" --product securestream-platform $ARGS
