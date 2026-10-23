@@ -15,7 +15,7 @@ stages: [test, scan, publish, report]
 
 include:
   - project: securestream/ci-templates
-    ref: &ss_ci_ref v1.0.0-rc.2
+    ref: &ss_ci_ref v1.0.0
     file:
       - templates/secret-scan.yml
       - templates/iac-scan.yml
