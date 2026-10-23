@@ -22,7 +22,7 @@ gaps are listed openly with the planned fix. Evidence links point to the build l
 
 | Practice | Implementation |
 |---|---|
-| **PO.3** Implement supporting toolchains | All scanners pinned by digest (`scripts/pin-images.sh`); versions recorded in `platform/versions.conf` |
+| **PO.3** Implement supporting toolchains | Shared security jobs from one versioned project (`securestream/ci-templates`, consumed by protected tag, [ci-templates](ci-templates.md)); all scanners pinned by digest (`scripts/pin-images.sh` in `securestream/ci-templates`, one `templates/images.yml` for all projects); versions recorded in `platform/versions.conf` |
 | **PO.5** Secure development environments | Isolated lab network, bastion-only administration, hardened runner, no inbound ports |
 | **PS.1** Protect all forms of code | Protected branches, gitleaks on full history, signed-off public mirror without secrets |
 | **PS.2** Verify software release integrity | cosign signatures verified by Kyverno; public key published in the application repository |
@@ -67,11 +67,11 @@ Honest position: the signing and SBOM pieces are in place; formal SLSA Build L2 
 
 Findings that cannot be fixed are recorded in `security/exceptions.yaml` of the scanned repository (`id, tool, rule,
 path, reason, owner, created, expires`, at most 90 days), never as inline suppressions. Checkov runs in report mode
-and `scripts/scan-gate.py` decides: a finding passes only with a matching, unexpired exception; a report with zero
+and `scan-gate.py` (ci-templates) decides: a finding passes only with a matching, unexpired exception; a report with zero
 checks fails. Current: catalog-api `EXC-0001` (CKV_K8S_21, render-time namespace, expires 2027-01-21); platform
 `EXC-0101`, `EXC-0102` (cloud samples, expire 2027-01-21).
 
-The CI job `exceptions-check` (`scripts/exceptions-check.py`) validates the whole file on every pipeline: schema,
+The CI job `exceptions-check` (`exceptions-check.py` (ci-templates)) validates the whole file on every pipeline: schema,
 unique `EXC-NNNN` ids, known tool, at most 90 days, not expired (fails), WARN 14 days before expiry. The same entries
 are mirrored to DefectDojo as time-boxed Risk Acceptances (`<product>:<id>`) by `defectdojo-upload`; DefectDojo
 reactivates the findings when they expire. Process and roles: [vulnerability-management](vulnerability-management.md).

@@ -220,3 +220,21 @@ Scope given by the human: Item 4, then Item 8, plus the open Item 5 check. Items
 3. Renew the read-only token before 2026-10-24 05:14 UTC: `sudo ~/securestream/scripts/claude-kubeconfig.sh`.
 4. Decide on `pods/log` for the assistant (troubleshooting value vs. secrets in logs).
 5. Create `docs/requirements-traceability.md` before starting Items 6, 7, 9.
+
+| 6 Central CI templates | Done | ci-templates `13a5fdf`, `fb5442c` (tag `v1.0.0`); securestream `a51b61b`, `652ea2d`, docs commit; catalog-api `49b49e4`, `0b0c115` | ci-templates pipeline 66 (`ss-tools`, `lint`, `secret-scan`). Branch pipelines with `v1.0.0-rc.2`: catalog-api 70 (11/11), securestream 71 (5/5). `main`: catalog-api 73 (16/16, Sonar gate PASSED), securestream 74 (7/7, `publish-github` OK). Same results as before: checkov-helm 96 checks / 4 excepted / 0 blocking; iac-scan 18/38/40/24 checks, 0 blocking; DefectDojo reimports into the same tests with `created=0 closed=0` (catalog-api tests 5–11, platform 1–4). Job token: catalog-api → ci-templates yes, catalog-api → securestream no. `exceptions: []` passes `exceptions-check`, an empty file fails |
+
+### Item 6 notes (2026-10-23)
+
+- Deviation (human decision): templates live in a separate private project `securestream/ci-templates`, not in
+  `securestream/ci-templates/` as the brief says, so the job token allowlist does not expose the platform repository
+  (vault files, Terraform). Consumers pin tag `v1.0.0`, not `main`. [ADR 0009](adr/0009-separate-ci-templates-project.md).
+- Created by the assistant through `gitlab-rails` with the human's approval: project (owner `carkcioglu`), protected
+  tags `v*` (Maintainer), job token allowlist `catalog-api`, `securestream`.
+- Added beyond the brief's eight files: `templates/images.yml` (one place for digests) and `templates/tools.yml`
+  (`ss-tools`); the brief's "image digests live in one place" needs them.
+- Behaviour differences, deliberate: new job `ss-tools` (`.pre`); `checkov-helm`, `exceptions-check`, `iac-scan`
+  need `ss-tools` instead of nothing; securestream `secret-scan` now also writes `gitleaks.json` with `--verbose`
+  (redacted); securestream `exceptions-check` moved from stage `scan` to `test`.
+- Local use of `scripts/iac-scan.sh gate` needs `SCAN_GATE=~/ci-templates/scripts/scan-gate.py`.
+- Open: remote branches `ci/templates` (both repositories) and the release-candidate tags `v1.0.0-rc.1`, `-rc.2`
+  are left for the human; `ci-templates` is not mirrored to GitHub (not requested).

@@ -115,7 +115,7 @@ security/                 exceptions.yaml (time-boxed accepted risks), checkov/ 
 infra/ansible             roles: baseline, dns_server, dns_client, lab_ca, ca_trust, lab_cert,
                           k3s, gitlab, gitlab_runner, vault  ·  playbooks/  ·  inventory/
 platform/                 Helm values, Kubernetes manifests, Vault policies, pinned versions
-scripts/                  operational scripts (e.g. vault-unseal.sh, iac-scan.sh, scan-gate.py, ci-status.sh)
+scripts/                  operational scripts (e.g. vault-unseal.sh, iac-scan.sh, ci-status.sh); shared CI scripts live in securestream/ci-templates
 docs/                     security controls, threat model, ADRs, runbooks, lessons learned, build log
 ```
 
@@ -139,6 +139,7 @@ never typed into files or chat. See [runbooks](docs/runbooks/).
 
 - [Security controls and framework mapping](docs/security-controls.md)
 - [Requirements traceability](docs/requirements-traceability.md) — requirement → control → evidence → status
+- [Shared CI templates](docs/ci-templates.md) — how a project joins the security chain (`securestream/ci-templates`)
 - [Threat model (STRIDE)](docs/threat-model.md)
 - [Architecture decision records](docs/adr/)
 - [Runbooks](docs/runbooks/) — Vault unseal, secret leak response, rejected image, credential rotation

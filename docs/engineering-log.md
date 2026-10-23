@@ -194,3 +194,15 @@
   `claude-readonly`, `can-i get secrets -A` → no. Sinir metin eslestirmeden RBAC ve dosya sahipligine tasindi.
 - `k3s` rolu: gizli icerik yazan dort goreve `diff: false`; surum sorgusu check modunda da calisir (`check_mode: false`).
   `k3s.yml --check --diff` filtreli ciktiyla: uc dugumde `changed=0`, admin kubeconfig gorevi `ok`. Ders #33.
+
+## Merkezi CI sablonlari (2026-10-23)
+- Yeni private proje `securestream/ci-templates` (sir yok): 8 sablon, `images.yml` (tum CI imaj digest'leri tek yerde),
+  `tools.yml` (`ss-tools` betikleri ayni tag'den ceker), ortak betikler ve `pin-images.sh`. Kendi pipeline'i: lint +
+  secret-scan (pipeline 66).
+- Ilk oneri (betikler securestream'de, catalog-api job token izni) insan tarafindan reddedildi: kapsam cok genis.
+  Izin listesi yalnizca ci-templates'te: catalog-api ve securestream. Korumali tag'ler `v*`. ADR 0009.
+- Tuketiciler tag ile: `v1.0.0` (= `v1.0.0-rc.2`, `fb5442c`). `include: ref` ve `SS_CI_REF` tek YAML anchor.
+- Test: catalog-api dal pipeline'i 70 (11 is), securestream 71; sonuclar oncekiyle ayni. catalog-api main yapilandirmasi
+  GitLab CI lint kuru calistirmasiyla dogrulandi (16 is).
+- Kopya betikler iki repodan kaldirildi; `iac-scan.sh` scan-gate.py'yi `.ss-tools/`'tan alir (yerelde `SCAN_GATE`).
+- Ders #34: sablondaki is degiskeni tuketicinin global degiskenini ezer.

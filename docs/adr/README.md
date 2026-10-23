@@ -10,3 +10,4 @@
 | [0006](0006-digest-pinning-and-cooldown.md) | CI tools pinned by digest, ~2-week cool-down |
 | [0007](0007-vault-and-external-secrets.md) | HashiCorp Vault + External Secrets Operator |
 | [0008](0008-sanitized-public-mirror.md) | GitLab source of truth, sanitized GitHub mirror |
+| [0009](0009-separate-ci-templates-project.md) | Shared CI templates in a separate project, consumed by tag |
