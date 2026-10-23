@@ -52,7 +52,7 @@
 - `.gitignore` içindeki `*.env` kuralı gizli olmayan versions.env'i de dışarıda bıraktı -> install.sh tekrarlanamaz oldu; versions.conf olarak düzeltildi.
 
 ## Sprint 1 - GitLab hesaplari ve ilk push (2026-10-22)
-- root: admin isleri icin, e-posta onurcarkcioglu+root@gmail.com.
+- root: admin isleri icin, ayri bir e-posta adresiyle.
 - carkcioglu: gunluk hesap (Regular), securestream grubunda Owner.
 - Parolalar ekrana basilmadan aktarildi: read -rs + printf | ssh ... gitlab-rails runner (STDIN).
 - ss-mgmt anahtari carkcioglu hesabina Keys::CreateService ile eklendi (1 yil, auth+signing).
@@ -111,3 +111,8 @@
   dogrulandi; scripts/tf.sh yalnizca terraform'a SSL_CERT_FILE (sistem paketi + pve CA) verir. Endpoint SAN'daki ada tasindi
   (pve1.carkcioglu.local); ss-mgmt /etc/hosts'a elle eklendi (ss-mgmt IaC disinda, bilincli istisna). plan exit 0, yanlis CA reddedildi.
 - Gunluk basliklarindaki "Gun 2/3" etiketleri kaldirildi; yeni basliklar isi ve tarihi anlatir. Eski commit mesajlarindaki "gun" ifadeleri degistirilmedi: main korumali, gecmis yeniden yazilmaz.
+
+## Dokuman duzeni: engineering-log (2026-10-23)
+- `docs/gunluk.md` -> `docs/engineering-log.md` (`git mv`, gecmis korunur); README ve CLAUDE.md referanslari guncellendi.
+- `ai-assisted-engineering.md`: "Interview summary" bolumu "Summary" oldu. Kisisel e-posta adresi kayittan cikarildi.
+  Yayinlanmis Git gecmisi yeniden yazilmadi.

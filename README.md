@@ -109,7 +109,7 @@ never typed into files or chat. See [runbooks](docs/runbooks/).
 - [Architecture decision records](docs/adr/)
 - [Runbooks](docs/runbooks/) — Vault unseal, secret leak response, rejected image, credential rotation
 - [Lessons learned](docs/lessons-learned.md) — real incidents from building this
-- [Build log (Turkish)](docs/gunluk.md)
+- [Build log (Turkish)](docs/engineering-log.md)
 
 ## License
 

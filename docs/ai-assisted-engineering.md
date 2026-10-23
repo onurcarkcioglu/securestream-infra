@@ -72,7 +72,7 @@ Controls are only claimed after they were tested. Tests of the Claude Code setup
   "secure". Those stay with the engineer, and the evidence is the pipeline, the admission controller and
   the tests — not the AI's confidence.
 
-## Interview summary (one paragraph)
+## Summary
 > I used AI as a pair engineer with the same restrictions I'd give a new hire: no secrets, no production
 > credentials, every change through the pipeline, and explicit approval for anything irreversible. It made
 > me much faster on drafts and debugging, but the value came from the controls: a preview step caught an
