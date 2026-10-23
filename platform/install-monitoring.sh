@@ -7,6 +7,7 @@
 # Tekrar calistirmak guvenlidir (helm upgrade --install, kubectl apply). Hicbir sir degeri basilmaz.
 set -euo pipefail
 cd "$(dirname "$0")"
+# shellcheck source-path=SCRIPTDIR source=versions.conf
 source versions.conf
 fail() { echo "HATA: $*" >&2; exit 1; }
 [[ -n ${KUBECONFIG:-} ]] || fail "KUBECONFIG tanimsiz (admin kubeconfig gerekir)"

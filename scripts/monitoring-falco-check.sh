@@ -37,5 +37,8 @@ done
 echo "Loki: $N olay. Son olaylar (zaman, oncelik, pod):"
 jq -r '.data.result[] | .stream as $s | .values[] | [(.[0] | tonumber / 1e9 | todate), $s.priority, ((.[1] | fromjson? | .output_fields["k8s.pod.name"]) // "?")] | @tsv' <<<"$OUT" \
   | sort -r | head -5
-grep -q "$POD" <<<"$(jq -r '.data.result[].values[][1]' <<<"$OUT")" \
-  && echo "OK: olay test podu $POD icin" || fail "olaylar var ama $POD icin degil"
+if grep -q "$POD" <<<"$(jq -r '.data.result[].values[][1]' <<<"$OUT")"; then
+  echo "OK: olay test podu $POD icin"
+else
+  fail "olaylar var ama $POD icin degil"
+fi

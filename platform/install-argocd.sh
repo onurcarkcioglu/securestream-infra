@@ -7,6 +7,7 @@
 # Tekrar calistirmak guvenlidir.
 set -euo pipefail
 cd "$(dirname "$0")"
+# shellcheck source-path=SCRIPTDIR source=versions.conf
 source versions.conf
 fail() { echo "HATA: $*" >&2; exit 1; }
 [[ $EUID -ne 0 ]] || fail "sudo olmadan calistirin (ssh icin kullanici anahtari gerekir)"
@@ -33,7 +34,7 @@ t = res[:deploy_token]
 puts "TOKEN #{t.username} #{t.token}"
 RUBY
 )
-# shellcheck disable=SC2016  # Python kodu tek tirnak icinde, kabuk genisletmesi istenmiyor
+# shellcheck disable=SC2016,SC2029  # Python tek tirnakta (genisleme yok); Ruby kodu bilerek istemci tarafinda, printf %q ile
 ssh "$GITLAB" "sudo gitlab-rails runner $(printf %q "$RB")" \
   | sed -n 's/^TOKEN \([A-Za-z0-9+_.-]\{4,\}\) \([A-Za-z0-9_-]\{20,\}\)$/\1 \2/p' \
   | python3 -I -c '

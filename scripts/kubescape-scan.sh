@@ -11,7 +11,7 @@
 # Cikti: ${KUBESCAPE_OUT:-~/securestream-reports/kubescape}/kubescape-<UTC>.json (+ latest.json baglantisi)
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-# shellcheck source=../platform/versions.conf
+# shellcheck source-path=SCRIPTDIR/../platform source=versions.conf
 source "$ROOT/platform/versions.conf"
 OUT=${KUBESCAPE_OUT:-$HOME/securestream-reports/kubescape}
 CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/securestream/kubescape-${KUBESCAPE_VERSION}

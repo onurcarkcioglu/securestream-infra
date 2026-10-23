@@ -26,6 +26,7 @@ puts "DTRACK_API_KEY #{created ? 'olusturuldu' : 'guncellendi'}: uzunluk #{var.v
 RUBY
 )
 
+# shellcheck disable=SC2029  # URL ve Ruby kodu bilerek istemci tarafinda genisletilir (printf %q ile kacisli)
 OUT=$(ssh "$SEC" "sudo python3 /opt/dependency-track/dtrack-admin.py ci-key $DTRACK_URL" \
   | sed -n 's/^TOKEN \(odt_[A-Za-z0-9_]\{20,\}\)$/\1/p' \
   | ssh "$GITLAB" "sudo gitlab-rails runner $(printf %q "$RB")") || fail "anahtar uretilemedi ya da yazilamadi"
