@@ -353,3 +353,42 @@ Next for the human:
 - After the installs: `claude-readonly` cannot read the new CRDs (`monitoring.coreos.com`, `argoproj.io`);
   regenerate with `scripts/claude-readonly-rbac.sh` and apply (human) if the assistant should see them.
 - securestream still includes ci-templates `v1.0.0` (no Dependency-Track job there; no container image).
+
+## Handoff (end of 2026-10-23)
+
+State: everything committed and pushed; last pipelines green. Runtime status in `requirements-traceability.md`:
+Dependency-Track **Done** (running); monitoring stack and Argo CD **Prepared, install pending (human)**.
+
+First things tomorrow, in this order:
+
+1. **Read-only token renewal before 2026-10-24 05:14 UTC** (the assistant's cluster access fails closed after it):
+   `sudo ~/securestream/scripts/claude-kubeconfig.sh`.
+2. **Monitoring stack (Item 9):** the human reads `platform/install-monitoring.sh` and the values in
+   `platform/helm-values/` + `platform/manifests/monitoring/`, then runs
+   `sudo KUBECONFIG=/etc/securestream/admin.kubeconfig ~/securestream/platform/install-monitoring.sh`;
+   evidence in a terminal: `sudo KUBECONFIG=/etc/securestream/admin.kubeconfig ~/securestream/scripts/monitoring-falco-check.sh`.
+   Hand both outputs to the assistant; it records them and sets the traceability rows to Done.
+3. **Argo CD (Item 10b):** the human reads `platform/install-argocd.sh`, `platform/helm-values/argocd.yaml`,
+   `platform/manifests/argocd/platform-project.yaml`, then runs `~/securestream/platform/install-argocd.sh`
+   (without sudo). **First login:** read `argocd-initial-admin-secret` with the admin kubeconfig, change the admin
+   password in the UI, delete that Secret. Sync stays manual.
+4. **ci-templates GitHub mirror:** create the empty public repository `onurcarkcioglu/ci-templates`, a fine-grained
+   token for it only (Contents read/write, 90 days), CI variable `GITHUB_MIRROR_TOKEN` in `securestream/ci-templates`
+   (protected, masked, hidden). Then the assistant merges `ci/publish-github` with a merge commit (no rebase, no force push).
+5. **Kubescape import:** `scripts/kubescape-upload.sh` (own DefectDojo API v2 key via hidden prompt); creates test
+   `kubescape` and Risk Acceptance `EXC-0103`.
+6. **Smoke test:** `scripts/catalog-admin-smoke.sh` after `vault login`; expects 401 / 401 / 200.
+7. **Branch cleanup** (all merged or superseded; deletion is the human's):
+   securestream `ci/templates`, `feat/iac-scan`; catalog-api `ci/hadolint-checkov`, `ci/sonarqube`, `ci/templates`;
+   ci-templates `feat/dependency-track`, `feat/kubescape-exceptions` (merged; keep `ci/publish-github` until step 4),
+   tags `v1.0.0-rc.1`, `v1.0.0-rc.2`.
+8. **Database backups decision:** DefectDojo, SonarQube and Dependency-Track keep PostgreSQL in Docker volumes on
+   ss-sec without backups. Decide target (local dump + off-host copy?), retention and restore test.
+
+Also open: after steps 2–3, regenerate `claude-readonly` RBAC for the new CRDs (`scripts/claude-readonly-rbac.sh`,
+applied by the human) if the assistant should read them; Kubescape High fixes (Falco least privilege, Kyverno
+read-only CA mount, platform limits); re-run `scripts/kubescape-scan.sh` after the installs.
+
+Added at the end of the session: `scripts/install-dev-tools.sh` (shellcheck v0.11.0, SHA256-pinned, `~/.local/bin`);
+all tracked shell scripts pass `shellcheck -S warning` (one SC2155 fixed in `scripts/iac-scan.sh`); securestream
+now includes ci-templates `v1.1.0` (GitLab CI lint dry run: valid, 7 jobs).

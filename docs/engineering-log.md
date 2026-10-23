@@ -237,3 +237,6 @@
 - Argo CD 10.10.2 (`4dfddc5`): platform manifest'leri, elle senkronizasyon, GitLab deploy token pipe ile Secret'a.
   Kurulum insan: `platform/install-argocd.sh`.
 - DNS: `grafana`, `argocd` -> 10.10.10.100 (infra.yml, ikinci calisma `changed=0`).
+- Gun sonu: `scripts/install-dev-tools.sh` (shellcheck v0.11.0, SHA256 ile); izlenen tum kabuk betikleri
+  `shellcheck -S warning` temiz (iac-scan.sh SC2155 duzeltildi). securestream ci-templates `v1.1.0` kullaniyor.
+  Traceability: izleme ve Argo CD "Prepared, install pending (human)".

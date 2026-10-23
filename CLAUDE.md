@@ -24,6 +24,7 @@ Lab CA: `infra/ansible/files/securestream-root-ca.crt` (use it as `--cacert` / `
 ## How to work here
 - `ansible-*` lives in `~/.local/bin`; non-login shells need `export PATH=$HOME/.local/bin:$PATH`.
 - Ansible order: `--syntax-check` → `--check --diff` → apply → second run must show `changed=0`.
+- Before a push: shell scripts pass `~/.local/bin/shellcheck -x -S warning` (installed by `scripts/install-dev-tools.sh`).
 - Multi-step operations become scripts with `set -euo pipefail`, explicit handling of expected failures,
   and a verification step that fails loudly with details.
 - Versions are pinned (`platform/versions.conf`); CI tool images by digest; adopt new releases after ~2 weeks.
