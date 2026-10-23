@@ -2,18 +2,24 @@
 # - secret-scan:    sir yollarindaki dosyalar sifreli mi + bu commit'in tum gecmisi gitleaks ile (kapi).
 # - iac-scan:       infra/terraform (samples/*/insecure haric) Checkov + ozel kurallar; istisnasiz bulgu durdurur.
 # - iac-scan-insecure: kasitli guvensiz bulut ornekleri; yakalanan kurallari listeler, kapi degil.
+# - exceptions-check: security/exceptions.yaml semasi ve sureleri (en fazla 90 gun, suresi dolan durdurur).
+# - defectdojo-upload: yalnizca main; iac-scan raporlari DefectDojo securestream-platform'a (kayit, kapi degil).
 # - publish-github: yalnizca main. Secret dosyalari (sifreli olsalar bile) TUM gecmisten cikarilir,
 #                   sonuc tekrar taranir ve ancak temizse GitHub'a gonderilir. Bkz. docs/adr/0008.
 workflow:
   rules:
     - if: $CI_COMMIT_BRANCH
 
-stages: [scan, publish]
+stages: [scan, publish, report]
 
 variables:
   GITLEAKS_IMAGE: "ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f"
   # catalog-api ile ayni digest (bridgecrew/checkov:3.3.26)
   CHECKOV_IMAGE: "bridgecrew/checkov:3.3.26@sha256:8e63f217cb084f1c1a067326a9cf6e37d54bdc82e5822210d50ca4e2f647dd93"
+  # catalog-api ile ayni digest (python:3.12-slim)
+  PYTHON_IMAGE: "python:3.12-slim@sha256:cb33f7f771ecec2ef1225cf39b159591a040391bd73e4c01f00fdfc4c47611d2"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  DD_URL: "https://defectdojo.securestream.lab"
   GITHUB_USER: "onurcarkcioglu"
 
 default:
@@ -57,10 +63,22 @@ iac-scan-insecure:
     # Kapi degil: guvensiz ornekler tarayicinin neyi yakaladigini gosterir; betik her zaman exit 0.
     - bash scripts/iac-scan.sh report
 
+exceptions-check:
+  stage: scan
+  needs: []
+  image: $PYTHON_IMAGE
+  cache:
+    key:
+      files: [requirements-ci.txt]
+    paths: [.cache/pip]
+  script:
+    - pip install -q --require-hashes -r requirements-ci.txt
+    - python3 scripts/exceptions-check.py
+
 publish-github:
   stage: publish
   # Iki kapi da yesil olmadan yayin yapilmaz; yayinin kendi temiz kopya taramasi ek bir kapidir.
-  needs: [secret-scan, iac-scan]
+  needs: [secret-scan, iac-scan, exceptions-check]
   image:
     name: $GITLEAKS_IMAGE
     entrypoint: [""]
@@ -86,3 +104,27 @@ publish-github:
       gitleaks git --redact .
       git push -q "https://${GITHUB_USER}:${GITHUB_MIRROR_TOKEN}@github.com/${GITHUB_USER}/securestream-infra.git" HEAD:refs/heads/main
       echo "GitHub'a yayinlandi: $(git rev-parse --short HEAD) ($(git rev-list --count HEAD) commit)"
+
+defectdojo-upload:
+  stage: report
+  image: $PYTHON_IMAGE
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: always
+  needs:
+    - { job: iac-scan, artifacts: true, optional: true }
+  cache:
+    key:
+      files: [requirements-ci.txt]
+    paths: [.cache/pip]
+  script:
+    # Yalnizca kapi raporlari (iac-scan); kasitli guvensiz ornekler DefectDojo'ya girmez.
+    - pip install -q --require-hashes -r requirements-ci.txt
+    - |
+      set -eu
+      ARGS=""
+      for f in iac-reports/*.json; do
+        [ -e "$f" ] || continue
+        ARGS="$ARGS --report checkov-$(basename "$f" .json)=$f"
+      done
+      python3 scripts/defectdojo-upload.py --url "$DD_URL" --product securestream-platform $ARGS
