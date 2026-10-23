@@ -158,3 +158,22 @@
 - CI: `exceptions-check` (iki repo), `defectdojo-upload` (main, when: always). catalog-api: trivy fs/image JSON
   ve ZAP XML raporlari eklendi. Istisnalar Risk Acceptance olarak aynalaniyor.
 - `docs/vulnerability-management.md`.
+
+## SonarQube ve Quality Gate (2026-10-23)
+- ss-sec: `sonarqube` rolu (`playbooks/appsec.yml`): Community Build 26.9.0.129388 + PostgreSQL 16.14, imajlar digest ile,
+  web yalnizca `127.0.0.1:9000`, nginx 443 (`sonar.securestream.lab`, lab CA), PostgreSQL disari acik degil.
+  26.10 (6 gunluk) ve PostgreSQL 16.15 (digest'leri 2026-10-22'de yeniden basildi) bekleme suresini doldurmadi.
+  Community Build'in LTA surumu yok.
+- Gizli degerler pipe ile ansible-vault'a; admin sifresi ilk acilista API ile degisti (`admin/admin` artik gecersiz).
+- `sonar-admin.py bootstrap` (idempotent): Standard Experience modu (API v2), `forceAuthentication`, varsayilan
+  gorunurluk private, Quality Gate "SecureStream" varsayilan (new_bugs > 0, new_vulnerabilities > 0,
+  new_security_hotspots_reviewed < 100, new_coverage < 70 kirmizi), yeni kod donemi 30 gun, CI kullanicisi
+  `gitlab-ci` yalnizca catalog-api'de Browse + Execute Analysis; global scan hicbir grupta yok.
+- `SONAR_TOKEN`: proje analiz token'i (sqp_, 90 gun), `scripts/sonarqube-ci-token.sh` ile pipe uzerinden GitLab'a.
+- catalog-api: `sonarqube` isi (main, sonar-scanner-cli 12.2 digest ile, `sonar.qualitygate.wait=true`),
+  `sign` artik `sonarqube`'u bekler: kirmizi kapi imza ve deploy'u durdurur. `unit-test` coverage.xml uretir
+  (pytest-cov 7.1.0, goreli yollar).
+- Yerel dogrulama: `scripts/sonarqube-local-scan.sh` (analiz ss-sec'te, ayri `catalog-api-local` projesi).
+  Negatif test: TLSv1 + CERT_NONE yardimci fonksiyonu → `new_vulnerabilities=3`, kapi kirmizi; geri alininca yesil.
+- Community Build sinirlari: yalnizca ana dal analiz edilir, dal/MR analizi yok; `SONAR_TOKEN` protected oldugu icin
+  is de yalnizca main'de calisir.

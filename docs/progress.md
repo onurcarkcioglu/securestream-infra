@@ -86,3 +86,25 @@ Notes for the next session:
   `security/exceptions.yaml` of each repository for the Risk Acceptances.
 - `kubectl -o yaml/json` deny rules stay until Item 8 (human decision, see notes above).
 - Pipeline status without ssh approval: `/usr/local/bin/ci-status <group/project> [job] [lines]`.
+
+| 4 SonarQube + Quality Gate | Done | `c26ab67`, `c76d6a5`, docs commit; catalog-api `886d080` | `appsec.yml` second run `changed=0`; TLS lab CA only (public CA fails with isolated `capath`), 9000/80/5432 not reachable from outside, anonymous API 401, `admin/admin` invalid, admin password 0 lines in container logs. `SONAR_TOKEN`: length 44, prefix `sqp_`, protected/masked/hidden. Pipeline 58 (`main`) all 15 jobs green: `QUALITY GATE STATUS: PASSED`, coverage 100 % parsed, SCM blame 2/2 files. Negative test (local, detached commit, never pushed): TLSv1 + `CERT_NONE` helper → `new_vulnerabilities=3`, gate ERROR, coverage still 100 %; reverted → gate OK with `new_bugs=0`, `new_vulnerabilities=0` |
+
+### Item 4 notes (2026-10-23)
+
+- Item 5 open check closed: pipeline 58 `trivy-image … created=0 closed=0 reactivated=0 untouched=170`.
+- Deviation: "current long-term release" does not exist for Community Build (LTA is a paid-edition release). Chosen:
+  newest Community Build older than two weeks (26.9.0.129388, 2026-10-02; 26.10 is 6 days old).
+- Deviation: PostgreSQL 16.14 instead of 16.15: every 16.15 digest was re-pushed on 2026-10-22. Upgrade after 2026-11-05.
+- Deviation: the `sonarqube` job runs on `main` only. `SONAR_TOKEN` is protected (brief) and Community Build analyses only
+  the main branch anyway. A red gate stops `sign` and `deploy` (`needs`), not the merge. Branch/MR analysis would need
+  a paid edition.
+- New code = changes since the first analysis until an analysis older than 30 days exists. The first `main` analysis
+  (pipeline 58) is the baseline; existing code is clean on overall measures (0 bugs, 0 vulnerabilities, 0 hotspots,
+  coverage 100 %, 3 code smells). Lessons learned #29.
+- Server mode: Standard Experience (set via API v2) so the gate can use bugs and vulnerabilities as the brief defines.
+- Local verification project `catalog-api-local` stays on the server (2 + 1 analyses, used again by
+  `scripts/sonarqube-local-scan.sh`); delete it in the UI if not wanted.
+- SonarQube findings are not imported into DefectDojo (not in Item 5's list); roadmap.
+- Observation: `defectdojo-upload` updates the Risk Acceptance `catalog-api:EXC-0001` (`accepted_findings`,
+  `expiration_date`) on every run; harmless, not idempotent. Not fixed yet.
+- Remote branches `ci/sonarqube`, `docs/sonarqube` (catalog-api): merged, left for the human to delete.
