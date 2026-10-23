@@ -28,7 +28,7 @@ Framework column: OWASP Top 10 CI/CD Security Risks (`SEC-n` = CICD-SEC-n), NIST
 | AWS, Azure, Google Cloud and on-prem | §5 | Partial (cloud: scan-only samples) |
 | Optional: CNAPP / CSPM / CWPP | §3, §5 | Partial |
 | Optional: privileged access management / secrets management (dedicated PAM tool or equivalent) | §4, §6 | Partial |
-| Optional: Kubernetes security, admission control, policy-as-code, runtime security | §3 | Done (posture scan: Roadmap) |
+| Optional: Kubernetes security, admission control, policy-as-code, runtime security | §3 | Done (posture scan: compliance 64.3, fixes open) |
 | Optional: automation in Python / Bash | §1, §2, §6 | Done |
 | Optional: false-positive management, rule/policy tuning, developer experience | §2 | Done |
 | Optional: monitoring, logging and observability | §7 | Roadmap (audit logs local only) |
@@ -72,7 +72,7 @@ Framework column: OWASP Top 10 CI/CD Security Risks (`SEC-n` = CICD-SEC-n), NIST
 | Admission control / policy-as-code | Kyverno signature verification (Deny) | `platform/manifests/kyverno-verify-images.yaml`, [ADR 0003](adr/0003-kyverno-imagevalidatingpolicy.md) | Done | — | SEC-9 |
 | Runtime security | Falco DaemonSet (modern eBPF); shell-in-container rule tested with `kubectl exec -it` | `platform/helm-values/falco.yaml`, [lessons-learned](lessons-learned.md) #9 | Done | Alerts are not shipped to a central store (§7) | RV.1 |
 | Least-privilege deploy identity | Namespace-scoped Role for the CI deploy ServiceAccount | `platform/manifests/catalog-deployer-rbac.yaml` | Done | — | SEC-5 |
-| Posture / benchmark scanning | — | — | **Roadmap** | No Kubescape (NSA, MITRE) or kube-bench scan and no score yet | — |
+| Posture / benchmark scanning | Kubescape 4.0.15 (NSA + MITRE, pinned by SHA256) run as the read-only identity `claude-readonly`; no host scan, no vendor exceptions; sanitized JSON report (resource ids and results only, secret check before writing); DefectDojo `securestream-platform` test `kubescape` via `scripts/kubescape-upload.sh`; false positives in `security/exceptions.yaml` (`EXC-0103`) | `scripts/kubescape-scan.sh`, `scripts/kubescape-upload.sh`, `platform/versions.conf`, `7fb3a72`, [security-controls](security-controls.md) §4; score 2026-10-23: compliance 64.3 (NSA 60.1, MITRE 61.7), 24/40 failed, 0 Critical, 9 High; negative tests: write-capable identity → exit 1, fake JWT in report → not written; DefectDojo parser on the report: 292 findings (40 High, 205 Medium, 47 Low) | **Partial** | Kubelet controls C-0069/C-0070 not evaluated (host scan / kube-bench); High fixes (Falco least privilege, Kyverno read-only CA mount, resource limits) open; import run by the human; scan is manual, not scheduled | — |
 
 ## 4. Secrets management
 
@@ -82,7 +82,7 @@ Framework column: OWASP Top 10 CI/CD Security Risks (`SEC-n` = CICD-SEC-n), NIST
 | Platform secrets at rest | Ansible Vault, values generated and moved only through pipes; CI check that every secret file is encrypted | `scripts/check-vault-encrypted.sh`; `077019f`, `a6433f1` | Done | — | SEC-6, PS.1 |
 | CI credentials | Protected + masked + hidden GitLab variables, generated server-side and piped (e.g. `scripts/sonarqube-ci-token.sh`, `scripts/defectdojo-ci-token.sh`), verified by length/prefix only; expiry and rotation | [runbook](runbooks/credential-rotation.md), [security-controls](security-controls.md) §6 | Done | `SONAR_TOKEN` and `DD_API_KEY` expire 2027-01-21 (rotation by script) | SEC-6 |
 | Leak response | First-30-minutes runbook; rotate first | [runbook](runbooks/secret-leak-first-30-minutes.md), [lessons-learned](lessons-learned.md) #12 | Done | — | SEC-6 |
-| Public mirror without secrets | `publish-github` rewrites history without secret files; needs `secret-scan` and `iac-scan` | `.gitlab-ci.yml` (`publish-github`), [ADR 0008](adr/0008-sanitized-public-mirror.md); pipeline 64 | Done | — | PS.1 |
+| Public mirror without secrets | `publish-github` rewrites history without secret files; needs `secret-scan` and `iac-scan`. `ci-templates`: same job (same path filter, gitleaks on the result, `main` + release tags `vX.Y.Z` only, no force push) | `.gitlab-ci.yml` (`publish-github`), [ADR 0008](adr/0008-sanitized-public-mirror.md); pipeline 64. ci-templates branch `ci/publish-github` (`e53dbe2`), pipeline 77 (`lint`, `secret-scan`); local test: filter keeps hashes, gitleaks no leaks, fake `secrets/` and `*.vault` files removed | Partial | `ci-templates` not yet published: needs the GitHub repository and a token scoped to it (human); the public `securestream` shows `include:` lines whose templates are not visible until then | PS.1 |
 | Privileged access management (PAM) | Vault for secrets; ask rules + human approval for `sudo`, `ssh`, pushes; admin kubeconfig root-only | §6 | **Partial** | No session brokering or recording; user `ubuntu` on the bastion has NOPASSWD sudo | SEC-2 |
 
 ## 5. Infrastructure as code (on-prem and cloud samples)

@@ -70,6 +70,7 @@ flowchart TB
 | Workload | Pod Security `restricted`, non-root, read-only rootfs, no capabilities, NetworkPolicy with **no egress** | `kubectl auth can-i` and network tests in the docs |
 | Secrets | Vault (Shamir 5/3), External Secrets with Kubernetes auth (no static token), Ansible Vault, protected+masked+hidden CI variables | Root token revoked after setup; values never printed |
 | Runtime | Falco (modern eBPF) | Shell in a container → alert with pod and namespace |
+| Posture | Kubescape (NSA, MITRE) with the assistant's read-only identity, sanitized report into DefectDojo (`scripts/kubescape-scan.sh`) | Compliance 64.3, 0 Critical; High findings assessed in [security-controls](docs/security-controls.md) §4 |
 | Testing the controls | Every gate was broken on purpose and verified to fail **for the right reason** | [lessons-learned](docs/lessons-learned.md) |
 
 Full mapping to **OWASP Top 10 CI/CD Security Risks, NIST SSDF (SP 800-218), SLSA and CIS Kubernetes**:
@@ -115,7 +116,7 @@ security/                 exceptions.yaml (time-boxed accepted risks), checkov/ 
 infra/ansible             roles: baseline, dns_server, dns_client, lab_ca, ca_trust, lab_cert,
                           k3s, gitlab, gitlab_runner, vault  ·  playbooks/  ·  inventory/
 platform/                 Helm values, Kubernetes manifests, Vault policies, pinned versions
-scripts/                  operational scripts (e.g. vault-unseal.sh, iac-scan.sh, ci-status.sh); shared CI scripts live in securestream/ci-templates
+scripts/                  operational scripts (e.g. vault-unseal.sh, iac-scan.sh, kubescape-scan.sh, ci-status.sh); shared CI scripts live in securestream/ci-templates
 docs/                     security controls, threat model, ADRs, runbooks, lessons learned, build log
 ```
 

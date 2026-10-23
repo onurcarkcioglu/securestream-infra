@@ -281,3 +281,26 @@ Session 21:30–22:15 TSİ. Scope: Item 6 only (human decision: do not start Ite
 - From the earlier report, still open: Items 7, 9, 10; NOPASSWD sudo / same Unix user; read-only token renewal
   (next 2026-10-24 05:14 UTC); DefectDojo Risk Acceptance rewritten on every run; no SonarQube/DefectDojo backups;
   upgrades SonarQube 26.10 (after 2026-10-31) and PostgreSQL 16.15 (after 2026-11-05).
+
+| 6b ci-templates GitHub mirror (human request) | Blocked (token) | ci-templates `e53dbe2` (branch `ci/publish-github`, not merged) | Job `publish-github` like securestream's: same path filter, check of the rewritten history, `gitleaks --log-opts=--all`, then push of `main` and release tags `vX.Y.Z` (no rc, no force). Pipeline 77 (branch) `lint` + `secret-scan` green; local run of the job's steps: `filter-repo` keeps hashes (nothing to remove), gitleaks no leaks, negative: fake `secrets/x.yml` and `a.vault` → 0 left after the filter. Blocked: `GITHUB_MIRROR_TOKEN` exists only in `securestream/securestream`, the token covers two repositories (ADR 0008), and `github.com/onurcarkcioglu/ci-templates` does not exist (API 404) |
+| 7 Kubernetes posture scanning (Kubescape) | Done (import and High fixes open, see notes) | `7fb3a72`; ci-templates `af0c6c6` (branch `feat/kubescape-exceptions`) | Kubescape 4.0.15 + regolibrary v2.0.38 by SHA256; runs as `claude-readonly` (`--dry-run`: all 19 required resource types listable, no secrets needed). Compliance **64.3** (NSA 60.1, MITRE 61.7), 38/40 controls evaluated, 24 failed: 0 Critical, 9 High, 13 Medium, 2 Low. Report sanitized (265 resource ids, no objects; forbidden keys 0, secret patterns 0). DefectDojo's own parser (in the uwsgi container, no import): 292 findings (40 High, 205 Medium, 47 Low). Negative tests: write-capable identity (fake `kubectl`) → exit 1 before any scan; fake JWT in the report → exit 1, nothing written. `exceptions-check`: 3 entries OK incl. `EXC-0103` (C-0012 false positive) |
+
+### Notes (ci-templates mirror and Item 7, 2026-10-23)
+
+- Mirror, for the human: (1) create the empty public repository `onurcarkcioglu/ci-templates`; (2) a new fine-grained
+  token for that repository only, Contents read/write, 90 days (not the existing token widened: one value would sit
+  in two projects); (3) GitLab `securestream/ci-templates` → CI/CD variable `GITHUB_MIRROR_TOKEN`, protected, masked
+  and hidden. Then merge `ci/publish-github` (push approval) and check the first `main` pipeline.
+- Item 7 deviation: the brief and the human expected the admin kubeconfig. Not needed: Kubescape's `--dry-run` shows
+  the read-only identity can list every resource type the NSA and MITRE controls use, so the scan runs with least
+  privilege and the script refuses a write-capable identity. Host scan stays off (it installs a DaemonSet), so the
+  kubelet controls C-0069/C-0070 are not evaluated (gap, kube-bench or a host-scan run by the human).
+- Vendor default exceptions are not used (empty list): every finding is visible; exceptions only in `security/exceptions.yaml`.
+- DefectDojo import is run by the human: `scripts/kubescape-upload.sh` (own API v2 key via `read -rsp`, format check,
+  key only in the Python process's environment). It needs the ci-templates change `af0c6c6` in `~/ci-templates`
+  (`git switch feat/kubescape-exceptions`, or after the merge): the Kubescape parser has no file path, so exceptions
+  match on `component_name` (the resource id). Without it `EXC-0103` would need `path: "*"` and accept every C-0012.
+- Reports: `~/securestream-reports/kubescape/` (0700, files 0600), not in Git: the public mirror would publish the
+  cluster's weak points.
+- High fixes not applied (cluster change, human): Falco `leastPrivileged`, Kyverno CA bundle read-only, CPU/memory
+  limits for platform charts. List and reasons: `security-controls.md` §4.

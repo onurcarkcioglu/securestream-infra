@@ -206,3 +206,17 @@
   GitLab CI lint kuru calistirmasiyla dogrulandi (16 is).
 - Kopya betikler iki repodan kaldirildi; `iac-scan.sh` scan-gate.py'yi `.ss-tools/`'tan alir (yerelde `SCAN_GATE`).
 - Ders #34: sablondaki is degiskeni tuketicinin global degiskenini ezer.
+
+## ci-templates GitHub aynasi ve Kubescape durus taramasi (2026-10-23)
+- ci-templates `publish-github` (dal `ci/publish-github`, `e53dbe2`): securestream'deki isle ayni filtre ve gitleaks
+  kapisi; `main` ve yalnizca `vX.Y.Z` tag'leri, zorla push yok. Dal pipeline'i 77 yesil. Bekliyor: GitHub reposu ve
+  yalnizca ona yetkili token (insan); mevcut token iki repo icin.
+- `scripts/kubescape-scan.sh`: Kubescape 4.0.15, NSA + MITRE, regolibrary v2.0.38; ikisi de SHA256 ile sabit
+  (`platform/versions.conf`). `claude-readonly` ile calisir (`--dry-run`: 19 kaynak turu okunabiliyor), yazabilen
+  kimligi reddeder, host scan kapali, hazir istisnalar kapali. Rapor temizlenir (yalnizca resourceID), sir kontrolu.
+- Skor: uyum 64.3 (NSA 60.1, MITRE 61.7); 24/40 kontrol basarisiz, Critical 0, High 9. C-0012 yanlis pozitif
+  (`EXC-0103`). Duzeltilecekler: Falco least privilege, Kyverno CA salt okunur, platform limitleri.
+- DefectDojo: parser rapordan 292 bulgu cikariyor (yalnizca parse testi). Yukleme insan: `scripts/kubescape-upload.sh`.
+  ci-templates `af0c6c6` (dal): istisnalar dosya yolu olmayan bulgularda `component_name` ile eslesir.
+- Olu deny kurali `Write(scripts/ci-status.sh)` (ders #35) ve `kubectl -n … get secret` deny kuralini atlatti, RBAC
+  durdurdu (ders #36).
