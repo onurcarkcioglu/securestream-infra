@@ -24,7 +24,8 @@ modules() {
 }
 
 scan() { # $1 = dizin -> rapor yolu
-  local report="$OUT/$(echo "$1" | tr / _).json"
+  local report
+  report="$OUT/$(echo "$1" | tr / _).json"
   "$CHECKOV" -d "$1" --framework terraform --external-checks-dir security/checkov \
     --quiet --soft-fail -o json > "$report"
   echo "$report"
