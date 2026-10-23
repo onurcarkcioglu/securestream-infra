@@ -26,8 +26,6 @@
       "Bash(kubectl get secret*)",
       "Bash(kubectl get secrets*)",
       "Bash(kubectl describe secret*)",
-      "Bash(kubectl * -o yaml*)",
-      "Bash(kubectl * -o json*)",
       "Edit(scripts/ci-status.sh)",
       "Write(scripts/ci-status.sh)",
       "Bash(git push * --delete*)",
@@ -35,7 +33,11 @@
       "Bash(git push * -d *)",
       "Bash(git push -d *)",
       "Bash(git push * :**)",
-      "Bash(git branch -D *)"
+      "Bash(git branch -D *)",
+      "Read(/etc/securestream/**)",
+      "Bash(*admin.kubeconfig*)",
+      "Bash(*--kubeconfig*)",
+      "Bash(*KUBECONFIG=*)"
     ],
     "ask": [
       "Bash(git push *)",
@@ -51,7 +53,12 @@
       "Bash(vault policy *)",
       "Bash(ssh *)",
       "Bash(sudo *)",
-      "Bash(*tf.sh apply*)"
+      "Bash(*tf.sh apply*)",
+      "Bash(*claude-kubeconfig.sh*)",
+      "Bash(*kubeconfig-lockdown.sh*)"
     ]
+  },
+  "env": {
+    "KUBECONFIG": "/home/ubuntu/.kube/claude-readonly.yaml"
   }
 }
