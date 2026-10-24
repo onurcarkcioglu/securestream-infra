@@ -70,7 +70,7 @@ flowchart TB
 | Workload | Pod Security `restricted`, non-root, read-only rootfs, no capabilities, NetworkPolicy with **no egress** | `kubectl auth can-i` and network tests in the docs |
 | Secrets | Vault (Shamir 5/3), External Secrets with Kubernetes auth (no static token), Ansible Vault, protected+masked+hidden CI variables | Root token revoked after setup; values never printed |
 | Runtime | Falco (modern eBPF) | Shell in a container → alert with pod and namespace |
-| Monitoring | Dependency-Track watches released SBOMs (running). Prepared, install pending: Prometheus, Grafana ("SecureStream Security"), Loki, Falcosidekick; Argo CD for drift of platform manifests (manual sync) | [requirements traceability](docs/requirements-traceability.md) §7 |
+| Monitoring | Prometheus, Grafana ("SecureStream Security" dashboard), Loki, Alloy, Falcosidekick (Falco → Loki proven end to end); Dependency-Track watches released SBOMs; Argo CD shows drift of platform manifests (manual sync) | [requirements traceability](docs/requirements-traceability.md) §7 |
 | Posture | Kubescape (NSA, MITRE) with the assistant's read-only identity, sanitized report into DefectDojo (`scripts/kubescape-scan.sh`) | Compliance 64.3, 0 Critical; High findings assessed in [security-controls](docs/security-controls.md) §4 |
 | Testing the controls | Every gate was broken on purpose and verified to fail **for the right reason** | [lessons-learned](docs/lessons-learned.md) |
 
@@ -118,7 +118,7 @@ infra/ansible             roles: baseline, dns_server, dns_client, lab_ca, ca_tr
                           k3s, gitlab, gitlab_runner, vault  ·  playbooks/  ·  inventory/
 platform/                 Helm values, Kubernetes manifests, Vault policies, pinned versions
 scripts/                  operational scripts (e.g. vault-unseal.sh, iac-scan.sh, kubescape-scan.sh, ci-status.sh); shared CI scripts live in securestream/ci-templates
-docs/                     security controls, threat model, ADRs, runbooks, lessons learned, build log
+docs/                     project history, security controls, threat model, ADRs, runbooks, lessons learned, logs
 ```
 
 ## Reproducing it
@@ -131,7 +131,8 @@ The VMs add up to ~96 GB RAM and ~600 GB disk (vCPUs are overcommitted); this la
    GitLab-managed Terraform state (`backend.tf`). On a rebuild from zero GitLab does not exist yet: run the first apply
    with `backend.tf` moved aside, then move it back and run `scripts/tfstate-token.sh` and `scripts/tfstate-migrate.sh`.
 3. Ansible: `baseline` → `infra` (DNS + CA) → `k3s` → `gitlab` → `runner` → `vault`.
-4. `platform/`: MetalLB, Traefik, cert-manager, Kyverno, Falco, External Secrets.
+4. `platform/`: MetalLB, Traefik, cert-manager, Kyverno, Falco, External Secrets; then `install-monitoring.sh` and
+   `install-argocd.sh` (see the header of each script).
 5. Push `catalog-api`; the pipeline does the rest.
 
 Secrets are created on the bastion and moved only through pipes (`read -rs`, `ssh … | ansible-vault encrypt`),
@@ -139,6 +140,8 @@ never typed into files or chat. See [runbooks](docs/runbooks/).
 
 ## Documentation
 
+- [Project history](docs/project-history.md) — how the platform was built, step by step
+- [Changelog](CHANGELOG.md)
 - [Security controls and framework mapping](docs/security-controls.md)
 - [Requirements traceability](docs/requirements-traceability.md) — requirement → control → evidence → status
 - [Shared CI templates](docs/ci-templates.md) — how a project joins the security chain (`securestream/ci-templates`)
@@ -147,7 +150,8 @@ never typed into files or chat. See [runbooks](docs/runbooks/).
 - [Architecture decision records](docs/adr/)
 - [Runbooks](docs/runbooks/) — Vault unseal, secret leak response, rejected image, credential rotation
 - [Lessons learned](docs/lessons-learned.md) — real incidents from building this
-- [Build log (Turkish)](docs/engineering-log.md)
+- [Delivery log](docs/progress.md) — workstreams with commits and evidence
+- [Engineering log (Turkish)](docs/engineering-log.md)
 
 ## License
 

@@ -1,11 +1,11 @@
-# Platform security expansion — progress
+# Delivery log — platform security expansion
 
-Brief: `docs/tasks/platform-security-expansion.md` (kept local). One row per item, appended when the item is done.
+Brief: `docs/tasks/platform-security-expansion.md` (kept local). One row per workstream, appended when it is done.
 
-| Item | Status | Commit | Evidence |
+| Workstream | Status | Commit | Evidence |
 |---|---|---|---|
-| 0 Housekeeping | Done | `docs: gunluk.md engineering-log.md olarak yeniden adlandirildi` | `git log --follow docs/engineering-log.md` shows full history; `grep -rn gunluk.md` → no references; no personal wording left except authorship (LICENSE, GitHub URLs) |
-| 1 Capacity check | Done (no resize needed) | `feat: pve1 kapasite betigi (salt okunur, Proxmox API)` | See capacity report below |
+| Housekeeping | Done | `docs: gunluk.md engineering-log.md olarak yeniden adlandirildi` | `git log --follow docs/engineering-log.md` shows full history; `grep -rn gunluk.md` → no references; no personal wording left except authorship (LICENSE, GitHub URLs) |
+| Capacity check | Done (no resize needed) | `feat: pve1 kapasite betigi (salt okunur, Proxmox API)` | See capacity report below |
 
 ### Capacity report (2026-10-23)
 
@@ -18,13 +18,13 @@ Brief: `docs/tasks/platform-security-expansion.md` (kept local). One row per ite
 | pve1 storage | — | `local-lvm` 724 GiB free of 793, `local` 80 GiB free | OK |
 | pve1 RAM / CPU totals | — | Not readable: the `terraform@pve` token has no `Sys.Audit` (HTTP 403). VMs allocated: 54 vCPU, 95 GiB RAM (all running) | **Human check:** read pve1 total RAM in the Proxmox UI; no new VM is added, so the plan does not raise the allocation |
 
-Decision: no `tf.sh apply` needed. Items 4 and 5 run inside the existing ss-sec VM, Item 9 inside the existing k3s nodes.
-Order kept as in the brief. Docker is not yet installed on ss-sec (Item 4 `appsec_host` installs it).
-| 2 Dockerfile + Helm scanning | Done | catalog-api `0490699`, `74e6a51`, `1c72ce0`, `0ecca7d` | Pipeline 39 all green; hadolint 0 findings; checkov 96 checks, 4 failed, 4 excepted (EXC-0001), 0 blocking. Fixed: CKV_K8S_14/15/35/43. Negative tests: bad Dockerfile line → hadolint exit 1 (not committed); gate without exceptions / expired exception / empty report → exit 1; chart without or with non-sha256 digest → render error |
+Decision: no `tf.sh apply` needed. SonarQube quality gate and DefectDojo vulnerability management run inside the existing ss-sec VM, monitoring stack inside the existing k3s nodes.
+Order kept as in the brief. Docker is not yet installed on ss-sec (the SonarQube workstream's `appsec_host` role installs it).
+| Dockerfile + Helm scanning | Done | catalog-api `0490699`, `74e6a51`, `1c72ce0`, `0ecca7d` | Pipeline 39 all green; hadolint 0 findings; checkov 96 checks, 4 failed, 4 excepted (EXC-0001), 0 blocking. Fixed: CKV_K8S_14/15/35/43. Negative tests: bad Dockerfile line → hadolint exit 1 (not committed); gate without exceptions / expired exception / empty report → exit 1; chart without or with non-sha256 digest → render error |
 
 ### Notes and deviations (2026-10-23)
 
-- Item 2 regression: the Secret-as-file change first deployed without `fsGroup` → admin endpoint 503 (caught by ZAP
+- Container and Helm scanning regression: the Secret-as-file change first deployed without `fsGroup` → admin endpoint 503 (caught by ZAP
   WARN 100000 in pipeline 38). Fixed in `0ecca7d`; after deploy: no key 401, wrong key 401. The 200 check needs the key
   from Vault: `scripts/catalog-admin-smoke.sh`, run by the human (open, see final report).
 - Checkov runs with `--soft-fail` + `scripts/scan-gate.py` as the decision. This is not a relaxation: the gate fails on
@@ -32,11 +32,11 @@ Order kept as in the brief. Docker is not yet installed on ss-sec (Item 4 `appse
 - Side task (human request): `scripts/ci-status.sh`, approved copy `/usr/local/bin/ci-status` (root:root 0755).
   Deviation: allow rule on the absolute path `Bash(/usr/local/bin/ci-status *)` instead of the requested
   `Bash(ci-status *)`, because `~/.local/bin` is first on `PATH` and user-writable (shadowing would bypass the control).
-- Decision (human): the deny rules `kubectl * -o yaml*` / `-o json*` (which also match `-o jsonpath=`) stay until Item 8.
-  Until then use `-o wide` / `-o custom-columns`. In Item 8, after `can-i` tests with the `claude-readonly` kubeconfig,
+- Decision (human): the deny rules `kubectl * -o yaml*` / `-o json*` (which also match `-o jsonpath=`) stay until the read-only cluster identity is in place.
+  Until then use `-o wide` / `-o custom-columns`. When the read-only cluster identity is set up, after `can-i` tests with the `claude-readonly` kubeconfig,
   remove them and record in lessons learned: "the boundary moved from text matching to RBAC".
 - Remote branch `ci/hadolint-checkov` (catalog-api, merged) still exists; deleting it is left to the human.
-| 3 Multi-cloud IaC scanning | Done | `2f8c266`, `d2a950c`, `f82ac12` | Branch pipelines 41 and 43 green (`iac-scan`, `iac-scan-insecure`); | Local: `iac-scan.sh gate` 4 modules (proxmox 18, aws 38, azure 40, gcp 24 checks), 0 blocking, 2 excepted; negative copy of aws/insecure in scope → 25 blocking, exit 1; `report`: AWS 25, Azure 30, GCP 11 findings, all 10 expected rules caught |
+| Multi-cloud IaC scanning | Done | `2f8c266`, `d2a950c`, `f82ac12` | Branch pipelines 41 and 43 green (`iac-scan`, `iac-scan-insecure`); | Local: `iac-scan.sh gate` 4 modules (proxmox 18, aws 38, azure 40, gcp 24 checks), 0 blocking, 2 excepted; negative copy of aws/insecure in scope → 25 blocking, exit 1; `report`: AWS 25, Azure 30, GCP 11 findings, all 10 expected rules caught |
 
 - Resolved (human decision): `secret-scan` in this repository had `allow_failure: true` (since `8c8c8a0`). Now a
   blocking gate, and `publish-github` needs it. Deviation from the approved plan: **no** `.gitleaks.toml` allowlist,
@@ -44,16 +44,16 @@ Order kept as in the brief. Docker is not yet installed on ss-sec (Item 4 `appse
   a future plain-text secret on those paths. The requested `$ANSIBLE_VAULT` check was added
   (`scripts/check-vault-encrypted.sh`, same path patterns as the publish filter; tested with fake files: plain-text
   file → FAIL, no files → FAIL).
-| 2b secret-scan gate (human request) | Done | `077019f`, `a6433f1` | Pipeline 43: vault check 4/4 OK (3 per-variable, 1 whole file), gitleaks 52 commits, no leaks; `allow_failure` removed; first version of the check failed on per-variable encryption (fixed, see ai-assisted-engineering) |
+| secret-scan gate (human request) | Done | `077019f`, `a6433f1` | Pipeline 43: vault check 4/4 OK (3 per-variable, 1 whole file), gitleaks 52 commits, no leaks; `allow_failure` removed; first version of the check failed on per-variable encryption (fixed, see ai-assisted-engineering) |
 
 - Correction (human request): deny rules against branch deletion in both repositories (`--delete`, `-d`, `:refspec`,
   `git branch -D`). Deviation: the requested `Bash(git push * :*)` did not block `git push --dry-run origin :x` (trailing
   `:*` is Claude Code's legacy prefix syntax); replaced by `Bash(git push * :**)`, which blocks it. Evidence: verification
   log in `docs/ai-assisted-engineering.md`, lessons learned #23.
 
-| 5 DefectDojo + vulnerability management | Done (one check open, see notes) | `5f9be86`, `584ac3c`, `7a23241`, `eeba99e`, `a014fc3`, `3b5929a`; catalog-api `4950184`, `b16fad8`, `ca60383`, `e695db2` | `appsec.yml` second run `changed=0`; TLS: lab CA only (public-CA test fails with isolated `capath`), TLS 1.0/1.1 refused server-side, unknown SNI refused, ports 80/8080 closed; admin password 0 lines in container log. Pipelines 51 + 52 green: 7 + 4 reports reimported, Risk Acceptances `catalog-api:EXC-0001` (4 findings), `securestream-platform:EXC-0101/0102` (1 each), all `risk_accepted`, expire 2027-01-21. `exceptions-check` negative tests: expired, > 90 days, duplicate id, missing field, unknown tool, future date, bad date → exit 1. `DD_API_KEY`: length 40, protected/masked/hidden (set by the human with `defectdojo-ci-token.sh`) |
+| DefectDojo + vulnerability management | Done (one check open, see notes) | `5f9be86`, `584ac3c`, `7a23241`, `eeba99e`, `a014fc3`, `3b5929a`; catalog-api `4950184`, `b16fad8`, `ca60383`, `e695db2` | `appsec.yml` second run `changed=0`; TLS: lab CA only (public-CA test fails with isolated `capath`), TLS 1.0/1.1 refused server-side, unknown SNI refused, ports 80/8080 closed; admin password 0 lines in container log. Pipelines 51 + 52 green: 7 + 4 reports reimported, Risk Acceptances `catalog-api:EXC-0001` (4 findings), `securestream-platform:EXC-0101/0102` (1 each), all `risk_accepted`, expire 2027-01-21. `exceptions-check` negative tests: expired, > 90 days, duplicate id, missing field, unknown tool, future date, bad date → exit 1. `DD_API_KEY`: length 40, protected/masked/hidden (set by the human with `defectdojo-ci-token.sh`) |
 
-### Item 5 notes (2026-10-23)
+### DefectDojo vulnerability management notes (2026-10-23)
 
 - Deviation: no per-product role `API_Importer`. DefectDojo 3.x OSS has no RBAC (moved to Pro); CI user `gitlab-ci` is
   non-staff in `authorized_users` (view/add/edit/import, no delete). Lessons learned #24.
@@ -61,7 +61,7 @@ Order kept as in the brief. Docker is not yet installed on ss-sec (Item 4 `appse
   `platform/versions.conf`, which feeds `platform/install.sh` for k3s.
 - Open check: `trivy-image` churn fix (`3b5929a`/`e695db2`). The first pipeline after it still churns once (old findings
   carry the digest path); the next catalog-api pipeline must show `trivy-image … created=0 closed=0`. To be checked
-  on the first Item 4 pipeline.
+  on the first SonarQube quality gate pipeline.
 - Admin login: user `admin`, password in `infra/ansible/inventory/group_vars/security/vault.yml`
   (`vault_dd_admin_password`, ansible-vault). The value was never shown.
 - CI token expires after 90 days (all DefectDojo API tokens): rotate with `scripts/defectdojo-ci-token.sh` before 2027-01-21.
@@ -69,8 +69,8 @@ Order kept as in the brief. Docker is not yet installed on ss-sec (Item 4 `appse
 
 ## Handoff (session stopped on request, 2026-10-23)
 
-Next order (human decision): **Item 5 (DefectDojo) → Item 4 (SonarQube) → Item 8 (read-only kubeconfig)**;
-Items 6, 7, 9, 10 only if the weekly limit allows.
+Next order (human decision): **DefectDojo → SonarQube → read-only kubeconfig**;
+Shared CI templates, Kubescape posture scanning, monitoring, SBOM monitoring and GitOps only if the weekly limit allows.
 
 Open for the human:
 1. Run `scripts/catalog-admin-smoke.sh` (needs `vault login`): expects 401 / 401 / 200. The assistant verified 401 and
@@ -81,17 +81,17 @@ Open for the human:
 Notes for the next session:
 - Local scanners were installed in the session scratchpad and are gone: hadolint v2.15.1 (verify with the release's
   `checksums.sha256`), `pip install checkov==3.3.26` in a venv. CI images are pinned (catalog-api `.gitlab-ci.yml`).
-- `scripts/scan-gate.py` exists in both repositories (identical); Item 6 makes securestream the single source.
-- Item 5 must import hadolint (`hadolint.json`), checkov (`checkov-helm.json`, `iac-reports/*.json`) and use
+- `scripts/scan-gate.py` exists in both repositories (identical); the shared CI templates make securestream the single source.
+- The DefectDojo workstream must import hadolint (`hadolint.json`), checkov (`checkov-helm.json`, `iac-reports/*.json`) and use
   `security/exceptions.yaml` of each repository for the Risk Acceptances.
-- `kubectl -o yaml/json` deny rules stay until Item 8 (human decision, see notes above).
+- `kubectl -o yaml/json` deny rules stay until the read-only cluster identity is in place (human decision, see notes above).
 - Pipeline status without ssh approval: `/usr/local/bin/ci-status <group/project> [job] [lines]`.
 
-| 4 SonarQube + Quality Gate | Done | `c26ab67`, `c76d6a5`, docs commit; catalog-api `886d080` | `appsec.yml` second run `changed=0`; TLS lab CA only (public CA fails with isolated `capath`), 9000/80/5432 not reachable from outside, anonymous API 401, `admin/admin` invalid, admin password 0 lines in container logs. `SONAR_TOKEN`: length 44, prefix `sqp_`, protected/masked/hidden. Pipeline 58 (`main`) all 15 jobs green: `QUALITY GATE STATUS: PASSED`, coverage 100 % parsed, SCM blame 2/2 files. Negative test (local, detached commit, never pushed): TLSv1 + `CERT_NONE` helper → `new_vulnerabilities=3`, gate ERROR, coverage still 100 %; reverted → gate OK with `new_bugs=0`, `new_vulnerabilities=0` |
+| SonarQube + Quality Gate | Done | `c26ab67`, `c76d6a5`, docs commit; catalog-api `886d080` | `appsec.yml` second run `changed=0`; TLS lab CA only (public CA fails with isolated `capath`), 9000/80/5432 not reachable from outside, anonymous API 401, `admin/admin` invalid, admin password 0 lines in container logs. `SONAR_TOKEN`: length 44, prefix `sqp_`, protected/masked/hidden. Pipeline 58 (`main`) all 15 jobs green: `QUALITY GATE STATUS: PASSED`, coverage 100 % parsed, SCM blame 2/2 files. Negative test (local, detached commit, never pushed): TLSv1 + `CERT_NONE` helper → `new_vulnerabilities=3`, gate ERROR, coverage still 100 %; reverted → gate OK with `new_bugs=0`, `new_vulnerabilities=0` |
 
-### Item 4 notes (2026-10-23)
+### SonarQube quality gate notes (2026-10-23)
 
-- Item 5 open check closed: pipeline 58 `trivy-image … created=0 closed=0 reactivated=0 untouched=170`.
+- DefectDojo vulnerability management open check closed: pipeline 58 `trivy-image … created=0 closed=0 reactivated=0 untouched=170`.
 - Deviation: "current long-term release" does not exist for Community Build (LTA is a paid-edition release). Chosen:
   newest Community Build older than two weeks (26.9.0.129388, 2026-10-02; 26.10 is 6 days old).
 - Deviation: PostgreSQL 16.14 instead of 16.15: every 16.15 digest was re-pushed on 2026-10-22. Upgrade after 2026-11-05.
@@ -104,14 +104,14 @@ Notes for the next session:
 - Server mode: Standard Experience (set via API v2) so the gate can use bugs and vulnerabilities as the brief defines.
 - Local verification project `catalog-api-local` stays on the server (2 + 1 analyses, used again by
   `scripts/sonarqube-local-scan.sh`); delete it in the UI if not wanted.
-- SonarQube findings are not imported into DefectDojo (not in Item 5's list); roadmap.
+- SonarQube findings are not imported into DefectDojo (not in the DefectDojo import list); roadmap.
 - Observation: `defectdojo-upload` updates the Risk Acceptance `catalog-api:EXC-0001` (`accepted_findings`,
   `expiration_date`) on every run; harmless, not idempotent. Not fixed yet.
 - Remote branch `ci/sonarqube` (catalog-api): merged, left for the human to delete (`docs/sonarqube` is local only).
 
-| 8 Read-only kubeconfig | Done | `f775f4d`, `e7122e6`, lockdown/settings commit; catalog-api `c7930d1` + settings commit | RBAC applied (33 API groups, no secrets/subresources/ESO generators); token 12 h, `can-i` 13/13; get pods OK, logs + exec Forbidden; `claude-readonly-rbac.sh --check` exit 1 on a modified manifest. After `kubeconfig-lockdown.sh` (human, sudo): plain `kubectl auth whoami` → `system:serviceaccount:claude-readonly:claude-readonly`, `can-i get secrets -A` → no, `can-i '*' '*' -A` → no, admin kubeconfig `root:root 0600` unreadable for `ubuntu`; `KUBECONFIG` = read-only file; `get pods -n catalog -o json \| jq` → 2. `-o yaml/json` deny rules removed by the human after this proof (lessons learned #31, #32) |
+| Read-only kubeconfig | Done | `f775f4d`, `e7122e6`, lockdown/settings commit; catalog-api `c7930d1` + settings commit | RBAC applied (33 API groups, no secrets/subresources/ESO generators); token 12 h, `can-i` 13/13; get pods OK, logs + exec Forbidden; `claude-readonly-rbac.sh --check` exit 1 on a modified manifest. After `kubeconfig-lockdown.sh` (human, sudo): plain `kubectl auth whoami` → `system:serviceaccount:claude-readonly:claude-readonly`, `can-i get secrets -A` → no, `can-i '*' '*' -A` → no, admin kubeconfig `root:root 0600` unreadable for `ubuntu`; `KUBECONFIG` = read-only file; `get pods -n catalog -o json \| jq` → 2. `-o yaml/json` deny rules removed by the human after this proof (lessons learned #31, #32) |
 
-### Item 8 notes (2026-10-23)
+### Read-only cluster identity notes (2026-10-23)
 
 - Human decision: deny rules (`kubectl * -o yaml*`, `-o json*`) stay until plain `kubectl auth whoami` shows
   `claude-readonly`. The assistant's own edit of `.claude/settings.json` was refused by the auto-mode classifier
@@ -130,7 +130,7 @@ Notes for the next session:
   - `scripts/claude-readonly-rbac.sh`: discovery only, works with the read-only identity; applying its output is admin.
   - Interactive `kubectl`/`helm` of the human: read-only after lockdown; admin via `sudo … --kubeconfig …`.
   - Not affected: catalog-api `deploy` (own `KUBECONFIG_B64`), crontab (no kubectl), GitLab CI of this repository.
-  - Item 7 (Kubescape) and Item 9 (Helm installs) need the admin kubeconfig: run by the human.
+  - Kubescape posture scanning and the monitoring Helm installs need the admin kubeconfig: run by the human.
 - `pods/log` is deliberately not readable (logs may contain secrets); widen only by human decision.
 - NOPASSWD sudo of `ubuntu` weakens the file-mode boundary; real control: `sudo` ask rule + human approval
   (`security-controls.md` CICD-SEC-2).
@@ -141,15 +141,15 @@ Notes for the next session:
 ## Session report 2026-10-23
 
 Session 18:55–21:15 TSİ (ss-mgmt runs on UTC; the human's stop time 23:30 TSİ was used, not 23:30 ss-mgmt time).
-Scope given by the human: Item 4, then Item 8, plus the open Item 5 check. Items 6, 7, 9, 10 were not started.
+Scope given by the human: SonarQube quality gate, then read-only cluster identity, plus the open DefectDojo vulnerability management check. Shared CI templates, Kubescape posture scanning, monitoring, SBOM monitoring and GitOps were not started.
 
 ### Completed items and evidence
 
-| Item | Status | Commits | Pipelines | Tests |
+| Workstream | Status | Commits | Pipelines | Tests |
 |---|---|---|---|---|
-| 5 (open check) | Closed | — | catalog-api 58 | `defectdojo-upload`: `trivy-image … created=0 closed=0 reactivated=0 untouched=170` |
-| 4 SonarQube + Quality Gate | Done | securestream `c26ab67`, `c76d6a5`, `fcc2449`; catalog-api `886d080`, `3606009` | catalog-api 57 (branch, 9/9), 58 and 60 (`main`, 15/15); securestream 59 | `appsec.yml` second run `changed=0`; TLS lab CA only (public CA fails), 9000/80/5432 closed from outside, anonymous API 401, `admin/admin` invalid, admin password 0 lines in logs; `SONAR_TOKEN` length 44, `sqp_`, protected/masked/hidden; gate PASSED on `main` with coverage 100 % parsed; negative test (detached local commit, never pushed): `new_vulnerabilities=3` → gate ERROR, coverage still 100 %; reverted → gate OK |
-| 8 Read-only kubeconfig | Done | securestream `f775f4d`, `e7122e6`, `8e26703` (human's settings), `c336bfd`, `2435628`, `52a0046`; catalog-api `c7930d1`, `4a7455b` (human's settings), `87fce39` | securestream 61, 63; catalog-api 62 (15/15) | `can-i` 13/13; get pods OK, logs/exec Forbidden; `--check` drift test exit 1; after lockdown plain `kubectl auth whoami` → `claude-readonly`, `can-i get secrets -A` → no, `can-i '*' '*' -A` → no, admin file unreadable for `ubuntu`, `-o json \| jq` → 2; `k3s.yml --check --diff` (filtered) `changed=0` on 3 nodes |
+| DefectDojo vulnerability management (open check) | Closed | — | catalog-api 58 | `defectdojo-upload`: `trivy-image … created=0 closed=0 reactivated=0 untouched=170` |
+| SonarQube + Quality Gate | Done | securestream `c26ab67`, `c76d6a5`, `fcc2449`; catalog-api `886d080`, `3606009` | catalog-api 57 (branch, 9/9), 58 and 60 (`main`, 15/15); securestream 59 | `appsec.yml` second run `changed=0`; TLS lab CA only (public CA fails), 9000/80/5432 closed from outside, anonymous API 401, `admin/admin` invalid, admin password 0 lines in logs; `SONAR_TOKEN` length 44, `sqp_`, protected/masked/hidden; gate PASSED on `main` with coverage 100 % parsed; negative test (detached local commit, never pushed): `new_vulnerabilities=3` → gate ERROR, coverage still 100 %; reverted → gate OK |
+| Read-only kubeconfig | Done | securestream `f775f4d`, `e7122e6`, `8e26703` (human's settings), `c336bfd`, `2435628`, `52a0046`; catalog-api `c7930d1`, `4a7455b` (human's settings), `87fce39` | securestream 61, 63; catalog-api 62 (15/15) | `can-i` 13/13; get pods OK, logs/exec Forbidden; `--check` drift test exit 1; after lockdown plain `kubectl auth whoami` → `claude-readonly`, `can-i get secrets -A` → no, `can-i '*' '*' -A` → no, admin file unreadable for `ubuntu`, `-o json \| jq` → 2; `k3s.yml --check --diff` (filtered) `changed=0` on 3 nodes |
 
 ### Assistant mistakes and how they were caught
 
@@ -199,7 +199,7 @@ Scope given by the human: Item 4, then Item 8, plus the open Item 5 check. Items
 ### Open work and remaining risks
 
 - `docs/requirements-traceability.md` (required by the brief) does not exist yet.
-- Items 6, 7, 9, 10 not started; 7 (Kubescape) and 9 (Helm) need the admin kubeconfig: the human runs them.
+- Shared CI templates, Kubescape posture scanning, monitoring, SBOM monitoring and GitOps not started; Kubescape and the monitoring Helm installs need the admin kubeconfig: the human runs them.
 - Kubernetes boundary: same Unix user with NOPASSWD sudo; `ssh` + `sudo` to `/etc/rancher/k3s/k3s.yaml` on the nodes;
   only ask rules + human approval. Roadmap: separate Unix user for the assistant. Read-only token expires every 12 h
   (next 2026-10-24 05:14 UTC).
@@ -219,11 +219,11 @@ Scope given by the human: Item 4, then Item 8, plus the open Item 5 check. Items
 2. As `ubuntu` in a new shell: `kubectl auth whoami` → `claude-readonly`; `sudo -l` and decide on NOPASSWD sudo.
 3. Renew the read-only token before 2026-10-24 05:14 UTC: `sudo ~/securestream/scripts/claude-kubeconfig.sh`.
 4. Decide on `pods/log` for the assistant (troubleshooting value vs. secrets in logs).
-5. Create `docs/requirements-traceability.md` before starting Items 6, 7, 9.
+5. Create `docs/requirements-traceability.md` before starting shared CI templates, Kubescape posture scanning and monitoring stack.
 
-| 6 Central CI templates | Done | ci-templates `13a5fdf`, `fb5442c` (tag `v1.0.0`); securestream `a51b61b`, `652ea2d`, docs commit; catalog-api `49b49e4`, `0b0c115` | ci-templates pipeline 66 (`ss-tools`, `lint`, `secret-scan`). Branch pipelines with `v1.0.0-rc.2`: catalog-api 70 (11/11), securestream 71 (5/5). `main`: catalog-api 73 (16/16, Sonar gate PASSED), securestream 74 (7/7, `publish-github` OK). Same results as before: checkov-helm 96 checks / 4 excepted / 0 blocking; iac-scan 18/38/40/24 checks, 0 blocking; DefectDojo reimports into the same tests with `created=0 closed=0` (catalog-api tests 5–11, platform 1–4). Job token: catalog-api → ci-templates yes, catalog-api → securestream no. `exceptions: []` passes `exceptions-check`, an empty file fails |
+| Central CI templates | Done | ci-templates `13a5fdf`, `fb5442c` (tag `v1.0.0`); securestream `a51b61b`, `652ea2d`, docs commit; catalog-api `49b49e4`, `0b0c115` | ci-templates pipeline 66 (`ss-tools`, `lint`, `secret-scan`). Branch pipelines with `v1.0.0-rc.2`: catalog-api 70 (11/11), securestream 71 (5/5). `main`: catalog-api 73 (16/16, Sonar gate PASSED), securestream 74 (7/7, `publish-github` OK). Same results as before: checkov-helm 96 checks / 4 excepted / 0 blocking; iac-scan 18/38/40/24 checks, 0 blocking; DefectDojo reimports into the same tests with `created=0 closed=0` (catalog-api tests 5–11, platform 1–4). Job token: catalog-api → ci-templates yes, catalog-api → securestream no. `exceptions: []` passes `exceptions-check`, an empty file fails |
 
-### Item 6 notes (2026-10-23)
+### Shared CI templates notes (2026-10-23)
 
 - Deviation (human decision): templates live in a separate private project `securestream/ci-templates`, not in
   `securestream/ci-templates/` as the brief says, so the job token allowlist does not expose the platform repository
@@ -241,9 +241,9 @@ Scope given by the human: Item 4, then Item 8, plus the open Item 5 check. Items
 
 ## Session report 2026-10-23 (evening)
 
-Session 21:30–22:15 TSİ. Scope: Item 6 only (human decision: do not start Item 7).
+Session 21:30–22:15 TSİ. Scope: shared CI templates only (human decision: do not start Kubescape posture scanning).
 
-### Item 6 evidence
+### Shared CI templates evidence
 
 | What | Result |
 |---|---|
@@ -278,20 +278,20 @@ Session 21:30–22:15 TSİ. Scope: Item 6 only (human decision: do not start Ite
 - Remote branches `ci/templates` (both repositories) and tags `v1.0.0-rc.1`, `v1.0.0-rc.2`: left for the human.
 - Tag pinning: a Maintainer can delete and recreate a protected tag; a commit SHA pin would be stricter (ADR 0009).
 - Local `scripts/iac-scan.sh gate` needs `SCAN_GATE=~/ci-templates/scripts/scan-gate.py`.
-- From the earlier report, still open: Items 7, 9, 10; NOPASSWD sudo / same Unix user; read-only token renewal
+- From the earlier report, still open: Kubescape posture scanning, monitoring, SBOM monitoring and GitOps; NOPASSWD sudo / same Unix user; read-only token renewal
   (next 2026-10-24 05:14 UTC); DefectDojo Risk Acceptance rewritten on every run; no SonarQube/DefectDojo backups;
   upgrades SonarQube 26.10 (after 2026-10-31) and PostgreSQL 16.15 (after 2026-11-05).
 
-| 6b ci-templates GitHub mirror (human request) | Blocked (token) | ci-templates `e53dbe2` (branch `ci/publish-github`, not merged) | Job `publish-github` like securestream's: same path filter, check of the rewritten history, `gitleaks --log-opts=--all`, then push of `main` and release tags `vX.Y.Z` (no rc, no force). Pipeline 77 (branch) `lint` + `secret-scan` green; local run of the job's steps: `filter-repo` keeps hashes (nothing to remove), gitleaks no leaks, negative: fake `secrets/x.yml` and `a.vault` → 0 left after the filter. Blocked: `GITHUB_MIRROR_TOKEN` exists only in `securestream/securestream`, the token covers two repositories (ADR 0008), and `github.com/onurcarkcioglu/ci-templates` does not exist (API 404) |
-| 7 Kubernetes posture scanning (Kubescape) | Done (import and High fixes open, see notes) | `7fb3a72`, `99a2b41`; ci-templates `af0c6c6` (`main`, consumers still pin `v1.0.0`) | Kubescape 4.0.15 + regolibrary v2.0.38 by SHA256; runs as `claude-readonly` (`--dry-run`: all 19 required resource types listable, no secrets needed). Compliance **64.3** (NSA 60.1, MITRE 61.7), 38/40 controls evaluated, 24 failed: 0 Critical, 9 High, 13 Medium, 2 Low. Report sanitized (265 resource ids, no objects; forbidden keys 0, secret patterns 0). DefectDojo's own parser (in the uwsgi container, no import): 292 findings (40 High, 205 Medium, 47 Low). Negative tests: write-capable identity (fake `kubectl`) → exit 1 before any scan; fake JWT in the report → exit 1, nothing written. `exceptions-check`: 3 entries OK incl. `EXC-0103` (C-0012 false positive) |
+| ci-templates GitHub mirror (human request) | Blocked (token) | ci-templates `e53dbe2` (branch `ci/publish-github`, not merged) | Job `publish-github` like securestream's: same path filter, check of the rewritten history, `gitleaks --log-opts=--all`, then push of `main` and release tags `vX.Y.Z` (no rc, no force). Pipeline 77 (branch) `lint` + `secret-scan` green; local run of the job's steps: `filter-repo` keeps hashes (nothing to remove), gitleaks no leaks, negative: fake `secrets/x.yml` and `a.vault` → 0 left after the filter. Blocked: `GITHUB_MIRROR_TOKEN` exists only in `securestream/securestream`, the token covers two repositories (ADR 0008), and `github.com/onurcarkcioglu/ci-templates` does not exist (API 404) |
+| Kubernetes posture scanning (Kubescape) | Done (import and High fixes open, see notes) | `7fb3a72`, `99a2b41`; ci-templates `af0c6c6` (`main`, consumers still pin `v1.0.0`) | Kubescape 4.0.15 + regolibrary v2.0.38 by SHA256; runs as `claude-readonly` (`--dry-run`: all 19 required resource types listable, no secrets needed). Compliance **64.3** (NSA 60.1, MITRE 61.7), 38/40 controls evaluated, 24 failed: 0 Critical, 9 High, 13 Medium, 2 Low. Report sanitized (265 resource ids, no objects; forbidden keys 0, secret patterns 0). DefectDojo's own parser (in the uwsgi container, no import): 292 findings (40 High, 205 Medium, 47 Low). Negative tests: write-capable identity (fake `kubectl`) → exit 1 before any scan; fake JWT in the report → exit 1, nothing written. `exceptions-check`: 3 entries OK incl. `EXC-0103` (C-0012 false positive) |
 
-### Notes (ci-templates mirror and Item 7, 2026-10-23)
+### Notes (ci-templates mirror and Kubescape posture scanning, 2026-10-23)
 
 - Mirror, for the human: (1) create the empty public repository `onurcarkcioglu/ci-templates`; (2) a new fine-grained
   token for that repository only, Contents read/write, 90 days (not the existing token widened: one value would sit
   in two projects); (3) GitLab `securestream/ci-templates` → CI/CD variable `GITHUB_MIRROR_TOKEN`, protected, masked
   and hidden. Then merge `ci/publish-github` (push approval) and check the first `main` pipeline.
-- Item 7 deviation: the brief and the human expected the admin kubeconfig. Not needed: Kubescape's `--dry-run` shows
+- Kubescape posture scanning deviation: the brief and the human expected the admin kubeconfig. Not needed: Kubescape's `--dry-run` shows
   the read-only identity can list every resource type the NSA and MITRE controls use, so the scan runs with least
   privilege and the script refuses a write-capable identity. Host scan stays off (it installs a DaemonSet), so the
   kubelet controls C-0069/C-0070 are not evaluated (gap, kube-bench or a host-scan run by the human).
@@ -311,13 +311,13 @@ Session 21:30–22:15 TSİ. Scope: Item 6 only (human decision: do not start Ite
 ## Session report 2026-10-23 (night)
 
 Scope given by the human: (1) mirror `ci-templates` to GitHub like `publish-github`, stop if the token lacks access;
-(2) Item 7 (Kubescape). Plus a mid-session request: record the dead deny rule `Write(scripts/ci-status.sh)`.
+(2) Kubescape posture scanning. Plus a mid-session request: record the dead deny rule `Write(scripts/ci-status.sh)`.
 
 | Task | Status | Commits | Pipelines | Evidence |
 |---|---|---|---|---|
 | Dead deny rule | Done (rule removal: human) | `78d248f` | 79 | Verification log row, lessons learned #35 (`Edit(path)` covers Write; `Write(path)` never matches) |
 | ci-templates GitHub mirror | Blocked (token, repository) | ci-templates `e53dbe2` (branch) | ci-templates 77 | See the 6b row and notes above |
-| 7 Kubescape | Done; import and High fixes by the human | `7fb3a72`, `99a2b41`; ci-templates `af0c6c6` | securestream 79 (7/7), ci-templates 78 (branch), 80 (`main`) | Compliance 64.3, 0 Critical; negative tests; DefectDojo parser 292 findings |
+| Kubescape | Done; import and High fixes by the human | `7fb3a72`, `99a2b41`; ci-templates `af0c6c6` | securestream 79 (7/7), ci-templates 78 (branch), 80 (`main`) | Compliance 64.3, 0 Critical; negative tests; DefectDojo parser 292 findings |
 
 Assistant mistake: `kubectl -n metallb-system get secret` in a compound command (forbidden by `CLAUDE.md`); RBAC
 `Forbidden`, deny rule did not match (lessons learned #36). Deviation: no admin kubeconfig for the scan (read-only
@@ -333,15 +333,15 @@ Next for the human:
    the admin kubeconfig. Re-scan after each.
 5. Read-only token renewal before 2026-10-24 05:14 UTC (`sudo ~/securestream/scripts/claude-kubeconfig.sh`).
 
-## Items 9 and 10 (human request: add them now and finish)
+## Monitoring, SBOM monitoring and GitOps (human request: add them now and finish)
 
-| Item | Status | Commit | Evidence |
+| Workstream | Status | Commit | Evidence |
 |---|---|---|---|
-| 9 Monitoring and security dashboard | Done (installed 2026-10-24 by the human) | `e79cbf8`, `95092bb` | **Install:** `install-monitoring.sh` completed; all `monitoring` pods Running (Loki, Prometheus, Grafana, operator, kube-state-metrics, Alloy, node-exporter x3), `falco-falcosidekick` Running; Grafana `/api/health` 200 over TLS (lab CA), anonymous dashboard API 401 (re-checked by the assistant). PSA baseline warning for node-exporter recorded as an exception (`security-controls.md`, Pod Security Admission exceptions). **Falco → Loki evidence:** `monitoring-falco-check.sh` passed: 1 event, 2026-10-24 09:19:12Z, priority Notice. Preparation: | Charts pinned (kube-prometheus-stack 92.2.0, Loki 7.3.0, Alloy 1.13.1; Falco 9.2.1 + Falcosidekick), all rendered locally with the values (Kubernetes 1.36.5). DNS `grafana`, `argocd` → 10.10.10.100 (`infra.yml` apply, second run `changed=0`, `dig` OK). Grafana admin password generated in the cluster (ESO `Password`, `CreatedOnce`). Install: `sudo KUBECONFIG=/etc/securestream/admin.kubeconfig platform/install-monitoring.sh`; evidence: `scripts/monitoring-falco-check.sh` |
-| 10a Dependency-Track | Done | `e88c6ca`; ci-templates `ae193ad`, `bc5b061` (tag `v1.1.0`); catalog-api `2a08712` | `appsec.yml` second run `changed=0`; bootstrap: admin password replaced, team `gitlab-ci` (3 permissions), default Automation team removed. Tests: `/api/version` 4.14.5 over TLS, frontend 200, anonymous API 401, `admin/admin` 401, public CA → curl exit 60, 8081/8082/5432/80 closed from outside; container log: 1 match for "password" = audit line "password changed" (no value). `DTRACK_API_KEY` length 45, `odt_`, protected/masked/hidden. CI lint dry run (`main`): valid, 17 jobs. ci-templates pipelines 84, 85. catalog-api pipeline 87 (`main`) 17/17 green: `dependency-track-upload` uploaded `sbom.cdx.json` (105 components) as `catalog-api main`, processed. securestream pipeline 88 green |
-| 10b Argo CD | Partial: chart installed 2026-10-24, repository access pending | `4dfddc5`, `95092bb` | **Install run 1:** Helm release deployed, all Argo CD pods Ready, `/healthz` 200 over TLS; deploy token step failed (`uninitialized constant DeployTokens::CreateService`), script stopped before the Secret and the Application; no token created or revoked (checked: no `argocd*` deploy tokens in GitLab). Fixed to `Projects::DeployTokens::CreateService` (lessons learned #37). **Run 2:** Helm revision 2 OK, token step failed on `expires_at` format, nothing created or revoked; fixed with an ISO date and a `valid?` dry run before creation (#39). Re-run by the human pending. Preparation: | Chart 10.10.2 rendered (ingress TLS `argocd-server-tls`, lab CA for GitLab, `server.insecure` behind Traefik). Install: `platform/install-argocd.sh` (without sudo; deploy token piped into a Secret) |
+| Monitoring and security dashboard | Done (installed 2026-10-24 by the human) | `e79cbf8`, `95092bb` | **Install:** `install-monitoring.sh` completed; all `monitoring` pods Running (Loki, Prometheus, Grafana, operator, kube-state-metrics, Alloy, node-exporter x3), `falco-falcosidekick` Running; Grafana `/api/health` 200 over TLS (lab CA), anonymous dashboard API 401 (re-checked by the assistant). PSA baseline warning for node-exporter recorded as an exception (`security-controls.md`, Pod Security Admission exceptions). **Falco → Loki evidence:** `monitoring-falco-check.sh` passed: 1 event, 2026-10-24 09:19:12Z, priority Notice. Preparation: | Charts pinned (kube-prometheus-stack 92.2.0, Loki 7.3.0, Alloy 1.13.1; Falco 9.2.1 + Falcosidekick), all rendered locally with the values (Kubernetes 1.36.5). DNS `grafana`, `argocd` → 10.10.10.100 (`infra.yml` apply, second run `changed=0`, `dig` OK). Grafana admin password generated in the cluster (ESO `Password`, `CreatedOnce`). Install: `sudo KUBECONFIG=/etc/securestream/admin.kubeconfig platform/install-monitoring.sh`; evidence: `scripts/monitoring-falco-check.sh` |
+| Dependency-Track | Done | `e88c6ca`; ci-templates `ae193ad`, `bc5b061` (tag `v1.1.0`); catalog-api `2a08712` | `appsec.yml` second run `changed=0`; bootstrap: admin password replaced, team `gitlab-ci` (3 permissions), default Automation team removed. Tests: `/api/version` 4.14.5 over TLS, frontend 200, anonymous API 401, `admin/admin` 401, public CA → curl exit 60, 8081/8082/5432/80 closed from outside; container log: 1 match for "password" = audit line "password changed" (no value). `DTRACK_API_KEY` length 45, `odt_`, protected/masked/hidden. CI lint dry run (`main`): valid, 17 jobs. ci-templates pipelines 84, 85. catalog-api pipeline 87 (`main`) 17/17 green: `dependency-track-upload` uploaded `sbom.cdx.json` (105 components) as `catalog-api main`, processed. securestream pipeline 88 green |
+| Argo CD | Partial: chart installed 2026-10-24, repository access pending | `4dfddc5`, `95092bb` | **Install run 1:** Helm release deployed, all Argo CD pods Ready, `/healthz` 200 over TLS; deploy token step failed (`uninitialized constant DeployTokens::CreateService`), script stopped before the Secret and the Application; no token created or revoked (checked: no `argocd*` deploy tokens in GitLab). Fixed to `Projects::DeployTokens::CreateService` (lessons learned #37). **Run 2:** Helm revision 2 OK, token step failed on `expires_at` format, nothing created or revoked; fixed with an ISO date and a `valid?` dry run before creation (#39). Re-run by the human pending. Preparation: | Chart 10.10.2 rendered (ingress TLS `argocd-server-tls`, lab CA for GitLab, `server.insecure` behind Traefik). Install: `platform/install-argocd.sh` (without sudo; deploy token piped into a Secret) |
 
-### Notes (Items 9 and 10, 2026-10-23)
+### Notes (monitoring, SBOM monitoring and GitOps, 2026-10-23)
 
 - Deviation: started after 23:30 TSİ on the human's explicit request.
 - Deviation: Dependency-Track 4.14.5, not 5.x (5.x is a different architecture; 4.14.5 is older than two weeks).
@@ -354,7 +354,7 @@ Next for the human:
   regenerate with `scripts/claude-readonly-rbac.sh` and apply (human) if the assistant should see them.
 - securestream still includes ci-templates `v1.0.0` (no Dependency-Track job there; no container image).
 
-### Notes (Items 9 and 10, 2026-10-24)
+### Notes (monitoring, SBOM monitoring and GitOps, 2026-10-24)
 
 - Monitoring installed by the human; Falco → Loki evidence passed (1 event, 09:19:12Z, Notice). Before the install:
   Falco values diff (`helm template` 9.2.1, first-install values vs. current): DaemonSet unchanged (privileged,
@@ -376,12 +376,12 @@ First things tomorrow, in this order:
 
 1. **Read-only token renewal before 2026-10-24 05:14 UTC** (the assistant's cluster access fails closed after it):
    `sudo ~/securestream/scripts/claude-kubeconfig.sh`.
-2. **Monitoring stack (Item 9):** the human reads `platform/install-monitoring.sh` and the values in
+2. **Monitoring stack:** the human reads `platform/install-monitoring.sh` and the values in
    `platform/helm-values/` + `platform/manifests/monitoring/`, then runs
    `sudo KUBECONFIG=/etc/securestream/admin.kubeconfig ~/securestream/platform/install-monitoring.sh`;
    evidence in a terminal: `sudo KUBECONFIG=/etc/securestream/admin.kubeconfig ~/securestream/scripts/monitoring-falco-check.sh`.
    Hand both outputs to the assistant; it records them and sets the traceability rows to Done.
-3. **Argo CD (Item 10b):** the human reads `platform/install-argocd.sh`, `platform/helm-values/argocd.yaml`,
+3. **Argo CD GitOps:** the human reads `platform/install-argocd.sh`, `platform/helm-values/argocd.yaml`,
    `platform/manifests/argocd/platform-project.yaml`, then runs `~/securestream/platform/install-argocd.sh`
    (without sudo). **First login:** read `argocd-initial-admin-secret` with the admin kubeconfig, change the admin
    password in the UI, delete that Secret. Sync stays manual.

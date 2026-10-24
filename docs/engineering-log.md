@@ -1,6 +1,6 @@
-# SecureStream Proje Günlüğü
+# SecureStream Mühendislik Günlüğü
 
-## Sprint 0 – Hazırlık
+## Temel: hipervizör, izole lab ağı ve bastion (ilk commit öncesi)
 
 **Yapılanlar:** Ubuntu şablonu, izole lab ağı (vmbr1 + NAT), Tailscale subnet route, yönetim VM'i (ss-mgmt), araç kurulumu, kısıtlı yetkili Terraform API kullanıcısı.
 
@@ -14,7 +14,7 @@
 
 **Öğrendiklerim:** Secret sızıntısında refleks: iptal et, yenile, süreci değiştir.
 
-## Sprint 1 – Altyapı kod olarak (1. yarı)
+## Altyapı kod olarak: golden image, Terraform ve Ansible envanteri (2026-10-22)
 
 **Yapılanlar:** qemu-guest-agent gömülü golden image (virt-customize), Terraform (bpg/proxmox) ile 8 VM, Terraform'un ürettiği Ansible envanteri.
 
@@ -27,9 +27,9 @@
 
 **Öğrendiklerim:** plan ve apply ayrı adımlar olmalı; plan önce okunur, sonra uygulanır.
 
-## Sprint 1 – 2. yarı
+## Baseline sertleştirme ve idempotency (2026-10-22)
 
-- Host key doğrulaması geri açıldı (ssh-keyscan ile TOFU; Sprint 5'te SSH sertifikalarına geçilecek).
+- Host key doğrulaması geri açıldı (ssh-keyscan ile TOFU; SSH sertifikalarına geçiş yol haritasında).
 - Baseline rolü: dist-upgrade, unattended-upgrades, chrony, auditd, SSH sertleştirme (sadece anahtar, root yok, AllowUsers).
 - Güvenli dağıtım: önce --check --diff, sonra tek sunucu, sonra hepsi. SSH handler'ı önce `sshd -t` ile doğruluyor.
 - İdempotency doğrulandı: ikinci çalıştırmada 8/8 sunucuda changed=0.
@@ -51,7 +51,7 @@
 - Test uygulaması (whoami) non-root, read-only rootfs, drop ALL capabilities ile çalışıyor; curl -k olmadan HTTPS başarılı.
 - `.gitignore` içindeki `*.env` kuralı gizli olmayan versions.env'i de dışarıda bıraktı -> install.sh tekrarlanamaz oldu; versions.conf olarak düzeltildi.
 
-## Sprint 1 - GitLab hesaplari ve ilk push (2026-10-22)
+## GitLab hesaplari ve ilk push (2026-10-22)
 - root: admin isleri icin, ayri bir e-posta adresiyle.
 - carkcioglu: gunluk hesap (Regular), securestream grubunda Owner.
 - Parolalar ekrana basilmadan aktarildi: read -rs + printf | ssh ... gitlab-rails runner (STDIN).
@@ -60,7 +60,7 @@
 - BEKLEYEN: root parolasi 24+ karakter, root ve carkcioglu icin 2FA.
 - BEKLEYEN: apt_repository -> deb822_repository (gitlab ve gitlab_runner rolleri).
 
-## Sprint 1 - KAPANIS: GitLab Runner (2026-10-22)
+## GitLab Runner (2026-10-22)
 - ss-runner: docker.io + gitlab-runner 19.5.0-1 (hold), Docker executor, grup runner'i, etiketler docker/securestream, run_untagged=false.
 - Token: CreateRunnerService -> SSH pipe -> ansible-vault encrypt_string. Hic ekranda gorunmedi.
 - Guvenlik: privileged=false, no-new-privileges, tls-ca-file=lab CA, config.toml 0600 + no_log.
@@ -69,7 +69,7 @@
 - Ders: Alpine wget = BusyBox, --ca-certificate yok; curl --cacert kullan.
 - Ders: --check modunda kurulmamis paket icin dpkg_selections patlar -> when: not ansible_check_mode.
 
-## Sprint 2 - catalog-api guvenli pipeline, asama 1 (2026-10-22)
+## catalog-api guvenli teslimat pipeline'i (2026-10-22)
 - catalog-api: FastAPI, 8 test, /docs kapali, girdi dogrulama testi, ruff (bandit S kurallari).
 - Pipeline: lint, test, gitleaks, semgrep, trivy fs, kaniko build, trivy image + CycloneDX SBOM. Ilk calisma 7/7 yesil.
 - Tum arac imajlari digest ile sabit (scripts/pin-images.sh). Neden: CVE-2026-33634 Trivy tedarik zinciri saldirisi (Mart 2026).
@@ -228,7 +228,7 @@
   CI kapilari), her biri icin durdurdugu/durduramadigi ve kanit; olay tablosu, kalan riskler, yol haritasi.
 
 ## Izleme, Dependency-Track ve Argo CD (2026-10-23)
-- Item 9 (`e79cbf8`): kube-prometheus-stack 92.2.0, Loki 7.3.0 tek ikili, Alloy 1.13.1, Falcosidekick -> Loki;
+- Izleme yigini (`e79cbf8`): kube-prometheus-stack 92.2.0, Loki 7.3.0 tek ikili, Alloy 1.13.1, Falcosidekick -> Loki;
   Grafana `grafana.securestream.lab` (TLS, sifre kume icinde ESO Password generator). Dashboard "SecureStream
   Security". Kurulum insan: `platform/install-monitoring.sh`; kanit: `scripts/monitoring-falco-check.sh`.
 - Dependency-Track 4.14.5 (`e88c6ca`): ss-sec'te Ansible rolu, nginx TLS, admin sifresi vault'tan, CI takimi en az

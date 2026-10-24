@@ -6,3 +6,6 @@
 tfplan
 .claude/settings.local.json
 iac-reports/
+
+# Local working briefs (not published)
+docs/tasks/
