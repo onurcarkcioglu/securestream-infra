@@ -1,0 +1,39 @@
+# Traefik: varsayilan giris yasak; web/websecure herkese acik (LoadBalancer 10.10.10.100), metrikler Prometheus'tan,
+# yonetim portu (traefik, 8080) kapali.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: traefik
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-web
+  namespace: traefik
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: traefik }
+  policyTypes: [Ingress]
+  ingress:
+    - ports: [{ port: web, protocol: TCP }, { port: websecure, protocol: TCP }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-metrics
+  namespace: traefik
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: traefik }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: monitoring }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: prometheus }
+      ports: [{ port: metrics, protocol: TCP }]

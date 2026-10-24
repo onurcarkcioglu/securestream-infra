@@ -13,6 +13,8 @@ date. The narrative version is [docs/project-history.md](docs/project-history.md
   Falcosidekick and cert-manager scrape targets, "Firing security alerts" dashboard panel.
 - `scripts/platform-render-check.sh`: renders every platform chart and enforces requests/limits and namespace PSA levels.
 - Pod Security Admission level for every platform namespace (`platform/manifests/namespaces.yaml`).
+- Default-deny ingress NetworkPolicies for the platform namespaces, a per-namespace rollout script with
+  automatic rollback and a selector/port check against live pods.
 
 ### Security
 - Kubescape High findings fixed in values: Falco least privilege, Kyverno without hostPath (lab CA from a
