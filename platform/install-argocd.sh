@@ -35,9 +35,14 @@ echo "==> Yeni GitLab deploy token $TOKEN_NAME (read_repository, 90 gun) -> Secr
 RB_CREATE=$(cat <<'RUBY'
 p = Project.find_by_full_path("securestream/securestream") or abort "HATA: proje yok"
 admin = User.find_by_username("root") or abort "HATA: root yok"
+# expires_at: Iso8601DateValidator ham degeri Date.iso8601 ile okur; Time degil "YYYY-MM-DD" verilir
+params = { name: "__NAME__", read_repository: true, expires_at: 90.days.from_now.to_date.iso8601 }
+# Once kaydetmeden dogrula (DeployToken.new + valid?), sonra olustur
+check = DeployToken.new(params.merge(deploy_token_type: DeployToken.deploy_token_types[:project_type],
+  project_id: p.id, creator_id: admin.id))
+abort "HATA: deploy token gecersiz (kaydedilmedi): #{check.errors.full_messages.to_sentence}" unless check.valid?
 # GitLab 19.x: Projects::DeployTokens::CreateService.new(project, user, params)
-res = Projects::DeployTokens::CreateService.new(p, admin,
-  { name: "__NAME__", read_repository: true, expires_at: 90.days.from_now }).execute
+res = Projects::DeployTokens::CreateService.new(p, admin, params).execute
 abort "HATA: deploy token olusturulamadi: #{res[:message]}" unless res[:status] == :success
 t = res[:deploy_token]
 puts "TOKEN #{t.username} #{t.token}"

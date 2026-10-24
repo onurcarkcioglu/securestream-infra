@@ -265,3 +265,7 @@
   `Projects::DeployTokens::CreateService.new(project, user, params)` bulundu. Ilk calisma chart'i kurdu, token
   adiminda durdu; GitLab'da `argocd*` token yok (ders #37). Ruby `ruby -c` temiz, shellcheck temiz.
 - Ders #38: kompozit komutta `kubectl get secret` tekrarlandi, deny kurali calistirmadan engelledi.
+- `install-argocd.sh` ikinci calisma: Helm revision 2, token adimi `expires_at` bicim hatasiyla durdu. `DeployToken`
+  `Iso8601DateValidator` ham degeri `Date.iso8601` ile okur; `TimeWithZone` yerine `to_date.iso8601`. Olusturmadan
+  once `DeployToken.new(...).valid?` ile kaydetmeden dogrulama (ders #39); salt okunur testte eski deger gecersiz,
+  yeni deger gecerli, `persisted=false`, token sayisi 0.
