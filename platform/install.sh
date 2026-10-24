@@ -50,11 +50,12 @@ helm upgrade --install external-secrets external-secrets --repo https://charts.e
   -f helm-values/external-secrets.yaml --wait --timeout 10m
 
 # PSA etiketleri: once sunucu tarafinda dry-run; mevcut bir pod yeni seviyeyi ihlal ediyorsa API uyari dondurur.
-# Uyari varsa etiketler uygulanmaz (ihlal eden pod yeniden olusturulamazdi). Guncellemeden kalan Terminating
-# pod'lar gecici uyari uretebilir: bir dakika boyunca tekrar denenir.
+# PSA uyarisi varsa etiketler uygulanmaz (ihlal eden pod yeniden olusturulamazdi). Guncellemeden kalan Terminating
+# pod'lar gecici uyari uretebilir: bir dakika boyunca tekrar denenir. Yalnizca PSA uyarisi sayilir; helm'in
+# olusturdugu namespace'lerde kubectl apply "last-applied-configuration" uyarisi da basar, o zararsizdir.
 echo "==> Namespace PSA etiketleri (manifests/namespaces.yaml)"
 for i in $(seq 1 12); do
-  psa_warn=$(kubectl apply --dry-run=server -f manifests/namespaces.yaml 2>&1 >/dev/null | grep -i 'warning' || true)
+  psa_warn=$(kubectl apply --dry-run=server -f manifests/namespaces.yaml 2>&1 >/dev/null | grep -i 'PodSecurity' || true)
   [[ -z $psa_warn ]] && break
   [[ $i == 12 ]] && fail "PSA dry-run uyarisi, etiketler uygulanmadi:
 $psa_warn"
