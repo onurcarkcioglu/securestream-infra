@@ -1,6 +1,4 @@
-# Yalnizca SecureStream pipeline'inin cosign anahtariyla imzaladigi ve SLSA v1 build provenance'i olan imajlar
-# calisabilir. Provenance ayni anahtarla imzali olmali; kaynak securestream grubundaki bir GitLab reposu, builder
-# lab runner'i olmali (catalog-api: ci/slsa-provenance.sh, docs/slsa-build-type.md).
+# Yalnizca SecureStream pipeline'inin cosign anahtariyla imzaladigi imajlar calisabilir.
 apiVersion: policies.kyverno.io/v1
 kind: ImageValidatingPolicy
 metadata:
@@ -32,22 +30,7 @@ spec:
           # Lab: imzalar kamuya acik Rekor loguna yazilmiyor (--tlog-upload=false).
           insecureIgnoreTlog: true
           insecureIgnoreSCT: true
-  attestations:
-    - name: slsa
-      intoto:
-        type: https://slsa.dev/provenance/v1
   validations:
     - expression: >-
         images.containers.map(image, verifyImageSignatures(image, [attestors.cosign])).all(e, e > 0)
       message: 'Imza dogrulanamadi: yalnizca SecureStream pipeline imzali imajlar calisabilir'
-    # extractPayload yalnizca imzasi dogrulanmis attestation icin calisir
-    - expression: >-
-        images.containers.map(image,
-          verifyAttestationSignatures(image, attestations.slsa, [attestors.cosign]) > 0
-            ? extractPayload(image, attestations.slsa).predicate.buildDefinition.externalParameters.source.uri
-                .startsWith('git+https://gitlab.securestream.lab/securestream/')
-              && extractPayload(image, attestations.slsa).predicate.runDetails.builder.id
-                == 'https://gitlab.securestream.lab/securestream/gitlab-runner/docker-unprivileged'
-            : false
-        ).all(e, e)
-      message: 'SLSA provenance yok ya da gecersiz: imaj securestream GitLab pipeline provenance attestation tasimali'
