@@ -15,11 +15,14 @@ date. The narrative version is [docs/project-history.md](docs/project-history.md
 - Pod Security Admission level for every platform namespace (`platform/manifests/namespaces.yaml`).
 - Default-deny ingress NetworkPolicies for the platform namespaces, a per-namespace rollout script with
   automatic rollback and a selector/port check against live pods.
+- CIS node benchmark with kube-bench (`k3s-cis-1.9`) through Ansible; raw reports are sanitised on the node.
 
 ### Security
 - Kubescape High findings fixed in values: Falco least privilege, Kyverno without hostPath (lab CA from a
   ConfigMap), MetalLB without the frr-k8s BGP backend, requests and limits for every container.
 - node-exporter moved to its own namespace; `monitoring` enforces `baseline`.
+- k3s PKI certificates 0600 (CIS 1.1.20); default ServiceAccounts no longer mount tokens; argocd-redis and the
+  demo app stop using the default ServiceAccount (CIS 5.1.5/5.1.6).
 - Argo CD ApplicationSet controller really disabled (`replicas: 0`; the old key was ignored by the chart).
 
 ### Changed

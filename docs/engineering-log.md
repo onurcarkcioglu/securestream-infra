@@ -312,3 +312,13 @@
   HTTPS, Falco -> Loki kaniti, Kyverno imzasiz imaji hala reddetmeli), basarisizsa o namespace'in politikalarini sil.
 - Insanin araya giren istegi: catalog-api rollout restart ve imzasiz imaj testi henuz calismamis (revizyon 19,
   pod'lar 14 saatlik, restartedAt yok); dry-run iz birakmadigi icin sonucu yalnizca komut ciktisinda gorunur.
+## kube-bench CIS dugum taramasi (2026-10-24)
+- kube-bench 0.16.0, profil `k3s-cis-1.9` (kube-bench'teki en yeni k3s profili; kume 1.36). `scripts/kube-bench-scan.sh`
+  -> `playbooks/kube-bench.yml`: dugumde gecici dizin, SHA256 dogrulamali indirme, ham rapor dugumde izin listesiyle
+  temizlenir (`files/kube-bench-sanitize.py`), yalnizca temiz rapor gelir, ss-mgmt'de sir kalibi kontrolu.
+- Temizleyici sahte token iceren yapay raporla test edildi: 0 eslesme, yalnizca 8 izinli alan.
+- Sonuc: worker'lar 17 PASS / 0 FAIL / 2 WARN; cp 61 PASS / 5 FAIL / 43 WARN (hepsi Manual).
+- 1.1.20: k3s rolu PKI sertifikalarini 0600 yapar (check -> apply -> ikinci calisma changed=0); tekrar tarama PASS (62).
+- 5.1.5/5.1.6: whoami token mount etmez, argocd-redis kendi SA'si, platform namespace'lerinde default SA automount
+  kapali (kume uygulamasi insanda). 1.2.26 (etcd yok, SQLite) ve 5.1.3 (sistem/chart rolleri) gerekceli.
+- Ders #42: check modunda atlanan blok always'i de atlar; bos gecici dizinler silindi.

@@ -1,0 +1,85 @@
+---
+# kube-bench (CIS, k3s profili) her k3s dugumunde gecici dizinde calisir; ham rapor dugumde temizlenir
+# (files/kube-bench-sanitize.py, izin listesi) ve yalnizca temiz rapor ss-mgmt'ye gelir. Ham rapor ve ikili silinir.
+# Dugumde kalici degisiklik yok. Calistirma: scripts/kube-bench-scan.sh (surum ve SHA256 versions.conf'tan -e ile).
+- name: kube-bench CIS taramasi
+  hosts: k3s
+  become: true
+  gather_facts: false
+  vars:
+    kube_bench_version: "{{ undef(hint='scripts/kube-bench-scan.sh verir') }}"
+    kube_bench_sha256: "{{ undef(hint='scripts/kube-bench-scan.sh verir') }}"
+    kube_bench_benchmark: "{{ undef(hint='scripts/kube-bench-scan.sh verir') }}"
+    kube_bench_report_dir: "{{ undef(hint='scripts/kube-bench-scan.sh verir') }}"
+    # Sunucu: kontrol duzlemi + dugum; worker: yalnizca dugum
+    kube_bench_targets: "{{ 'master,controlplane,node,policies' if inventory_hostname in groups['k3s_server'] else 'node' }}"
+  tasks:
+    - name: Gecici dizin
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: kube-bench
+      register: kb_tmp
+      check_mode: false
+
+    # Check modunda tarama yapilmaz (indirme ve komut yok); yalnizca gecici dizin acilip silinir
+    - name: Tarama, temizleme, toplama ve temizlik
+      when: not ansible_check_mode
+      block:
+        - name: kube-bench arsivi (SHA256 dogrulamali)
+          ansible.builtin.get_url:
+            url: "https://github.com/aquasecurity/kube-bench/releases/download/v{{ kube_bench_version }}/kube-bench_{{ kube_bench_version }}_linux_amd64.tar.gz"
+            dest: "{{ kb_tmp.path }}/kube-bench.tar.gz"
+            checksum: "sha256:{{ kube_bench_sha256 }}"
+            mode: "0600"
+
+        - name: Arsivi ac
+          ansible.builtin.unarchive:
+            src: "{{ kb_tmp.path }}/kube-bench.tar.gz"
+            dest: "{{ kb_tmp.path }}"
+            remote_src: true
+
+        - name: Temizleyici
+          ansible.builtin.copy:
+            src: ../files/kube-bench-sanitize.py
+            dest: "{{ kb_tmp.path }}/sanitize.py"
+            mode: "0700"
+
+        # Ham ciktida journal satirlari ve yapilandirma icerigi var: ekrana ve Ansible loguna gelmez
+        - name: kube-bench calistir (ham rapor dugumde kalir)
+          ansible.builtin.command:
+            argv:
+              - "{{ kb_tmp.path }}/kube-bench"
+              - run
+              - --config-dir={{ kb_tmp.path }}/cfg
+              - --benchmark={{ kube_bench_benchmark }}
+              - --targets={{ kube_bench_targets }}
+              - --json
+              - --outputfile={{ kb_tmp.path }}/raw.json
+          no_log: true
+          changed_when: false
+
+        - name: Ham raporu temizle
+          ansible.builtin.command:
+            argv: [/usr/bin/python3, -I, "{{ kb_tmp.path }}/sanitize.py", "{{ kb_tmp.path }}/raw.json",
+                   "{{ kb_tmp.path }}/clean.json", "{{ inventory_hostname }}"]
+          no_log: true
+          changed_when: false
+
+        - name: Temiz raporu ss-mgmt'ye al
+          ansible.builtin.fetch:
+            src: "{{ kb_tmp.path }}/clean.json"
+            dest: "{{ kube_bench_report_dir }}/{{ inventory_hostname }}.json"
+            flat: true
+      always:
+        - name: Gecici dizini sil (ham rapor ve ikili)
+          ansible.builtin.file:
+            path: "{{ kb_tmp.path }}"
+            state: absent
+          check_mode: false
+
+    # Blok atlandiginda (check modu) always da atlanir: gecici dizin burada da silinir
+    - name: Gecici dizini sil (blok disi)
+      ansible.builtin.file:
+        path: "{{ kb_tmp.path }}"
+        state: absent
+      check_mode: false
