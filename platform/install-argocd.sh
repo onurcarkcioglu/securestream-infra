@@ -3,8 +3,10 @@
 # Insan calistirir, sudo OLMADAN (ssh ubuntu anahtarlariyla); kume islemleri icinde sudo + admin kubeconfig:
 #   ~/securestream/platform/install-argocd.sh
 # Deploy token (yalnizca read_repository, 90 gun) gitlab-rails'ten pipe ile Secret manifest'ine, oradan
-# kubectl apply'a gider: ekrana, argumana, diske girmez. Her calistirmada eski "argocd" token'i iptal edilir.
-# Tekrar calistirmak guvenlidir.
+# kubectl apply'a gider: ekrana, argumana, diske girmez.
+# Token sirasi: yeni token ("argocd-<UTC zaman>") olusturulur, Secret'a yazilir, Argo CD depoyu yeni token'la
+# okuyabildigi dogrulanir; eski "argocd" / "argocd-*" token'lari EN SON iptal edilir. Dogrulama basarisiz olursa
+# eski token'lar dokunulmadan kalir; tekrar calistirmak artik token'lari da temizler. Tekrar calistirmak guvenlidir.
 set -euo pipefail
 cd "$(dirname "$0")"
 # shellcheck source-path=SCRIPTDIR source=versions.conf
@@ -16,26 +18,32 @@ k() { sudo env KUBECONFIG="$ADMIN_KUBECONFIG" "$@"; }
 GITLAB=ubuntu@10.10.10.10
 REPO=https://gitlab.securestream.lab/securestream/securestream.git
 CA=../infra/ansible/files/securestream-root-ca.crt
+APP=platform-manifests
+TOKEN_NAME="argocd-$(date -u +%Y%m%d%H%M%S)"
+# gitlab-rails runner: Ruby kodu ssh uzerinden calisir (kod sir icermez, cikti pipe'ta kalir)
+rails() {
+  # shellcheck disable=SC2029  # Ruby kodu bilerek istemci tarafinda, printf %q ile
+  ssh "$GITLAB" "sudo gitlab-rails runner $(printf %q "$1")"
+}
 
 echo "==> Argo CD chart ${ARGOCD_CHART_VERSION}"
 k helm upgrade --install argocd argo-cd --repo https://argoproj.github.io/argo-helm \
   --version "$ARGOCD_CHART_VERSION" -n argocd --create-namespace -f helm-values/argocd.yaml \
   --set-file 'configs.tls.certificates.gitlab\.securestream\.lab'="$CA" --wait --timeout 10m
 
-echo "==> GitLab deploy token (read_repository, 90 gun) -> Secret argocd/repo-securestream"
-RB=$(cat <<'RUBY'
+echo "==> Yeni GitLab deploy token $TOKEN_NAME (read_repository, 90 gun) -> Secret argocd/repo-securestream"
+RB_CREATE=$(cat <<'RUBY'
 p = Project.find_by_full_path("securestream/securestream") or abort "HATA: proje yok"
-p.deploy_tokens.active.where(name: "argocd").each(&:revoke!)
 admin = User.find_by_username("root") or abort "HATA: root yok"
-res = DeployTokens::CreateService.new(p, admin, name: "argocd", read_repository: true,
+res = DeployTokens::CreateService.new(p, admin, name: "__NAME__", read_repository: true,
   expires_at: 90.days.from_now).execute
 abort "HATA: deploy token olusturulamadi: #{res[:message]}" unless res[:status] == :success
 t = res[:deploy_token]
 puts "TOKEN #{t.username} #{t.token}"
 RUBY
 )
-# shellcheck disable=SC2016,SC2029  # Python tek tirnakta (genisleme yok); Ruby kodu bilerek istemci tarafinda, printf %q ile
-ssh "$GITLAB" "sudo gitlab-rails runner $(printf %q "$RB")" \
+# shellcheck disable=SC2016  # Python tek tirnakta (genisleme yok)
+rails "${RB_CREATE//__NAME__/$TOKEN_NAME}" \
   | sed -n 's/^TOKEN \([A-Za-z0-9+_.-]\{4,\}\) \([A-Za-z0-9_-]\{20,\}\)$/\1 \2/p' \
   | python3 -I -c '
 import json, sys
@@ -50,7 +58,7 @@ json.dump({"apiVersion": "v1", "kind": "Secret",
           sys.stdout)' "$REPO" \
   | k kubectl apply -f -
 
-echo "==> AppProject platform + Application platform-manifests (elle senkronizasyon)"
+echo "==> AppProject platform + Application $APP (elle senkronizasyon)"
 k kubectl apply -f manifests/argocd/platform-project.yaml
 
 echo "==> Dogrulama"
@@ -61,11 +69,32 @@ for i in $(seq 1 30); do
   sleep 5
 done
 echo "   Argo CD TLS (lab CA) /healthz -> 200"
+# Hard refresh: depo yeni token'la yeniden okunur (onceki calismadan kalan onbellekli durum sayilmaz)
+k kubectl -n argocd annotate application "$APP" argocd.argoproj.io/refresh=hard --overwrite >/dev/null
+sync=""; refresh=pending
 for i in $(seq 1 24); do
-  sync=$(k kubectl -n argocd get application platform-manifests -o jsonpath='{.status.sync.status}' 2>/dev/null || true)
-  [[ -n $sync && $sync != Unknown ]] && break
+  refresh=$(k kubectl -n argocd get application "$APP" \
+    -o jsonpath='{.metadata.annotations.argocd\.argoproj\.io/refresh}' 2>/dev/null || echo pending)
+  sync=$(k kubectl -n argocd get application "$APP" -o jsonpath='{.status.sync.status}' 2>/dev/null || true)
+  [[ -z $refresh && -n $sync && $sync != Unknown ]] && break
   sleep 5
 done
-echo "   platform-manifests: sync=${sync:-?} (OutOfSync = kume Git'ten farkli; ayrinti arayuzde)"
-[[ -n $sync && $sync != Unknown ]] || fail "uygulama depoyu okuyamadi: kubectl -n argocd describe application platform-manifests"
+cmperr=$(k kubectl -n argocd get application "$APP" \
+  -o jsonpath='{.status.conditions[?(@.type=="ComparisonError")].message}' 2>/dev/null || true)
+echo "   $APP: sync=${sync:-?} (OutOfSync = kume Git'ten farkli; ayrinti arayuzde)"
+[[ -z $refresh && -n $sync && $sync != Unknown && -z $cmperr ]] \
+  || fail "uygulama depoyu yeni token'la okuyamadi (refresh=${refresh:-bitti}, ${cmperr:-hata mesaji yok}); eski token'lar iptal EDILMEDI: kubectl -n argocd describe application $APP"
+
+echo "==> Eski deploy token'lari iptal (yeni token $TOKEN_NAME dogrulandi)"
+RB_REVOKE=$(cat <<'RUBY'
+p = Project.find_by_full_path("securestream/securestream") or abort "HATA: proje yok"
+keep = p.deploy_tokens.active.find_by(name: "__NAME__") or abort "HATA: yeni token aktif degil; iptal yapilmadi"
+old = p.deploy_tokens.active.where("name = ? OR name LIKE ?", "argocd", "argocd-%").where.not(id: keep.id).to_a
+old.each(&:revoke!)
+puts "REVOKED #{old.size}"
+RUBY
+)
+revoked=$(rails "${RB_REVOKE//__NAME__/$TOKEN_NAME}" | sed -n 's/^REVOKED \([0-9]\{1,\}\)$/\1/p' || true)
+[[ -n $revoked ]] || fail "eski token iptali dogrulanamadi (GitLab: securestream/securestream > Settings > Repository > Deploy tokens)"
+echo "   iptal edilen eski token: $revoked"
 echo "==> Tamam. Admin sifresi: argocd-initial-admin-secret (insan okur, giriste degistirir, sonra Secret'i siler)"

@@ -240,3 +240,17 @@
 - Gun sonu: `scripts/install-dev-tools.sh` (shellcheck v0.11.0, SHA256 ile); izlenen tum kabuk betikleri
   `shellcheck -S warning` temiz (iac-scan.sh SC2155 duzeltildi). securestream ci-templates `v1.1.0` kullaniyor.
   Traceability: izleme ve Argo CD "Prepared, install pending (human)".
+
+## Izleme ve Argo CD kurulum betiklerinde guvenlik duzeltmeleri (2026-10-24)
+- `platform/install-argocd.sh`: deploy token sirasi tersine cevrildi. Yeni token (`argocd-<UTC zaman>`) olusturulur,
+  Secret'a yazilir, Application hard refresh ile yeni token'la okunur (`ComparisonError` yok); eski `argocd` /
+  `argocd-*` token'lari en son iptal edilir. Dogrulama basarisizsa eskiler kalir. Ruby kodu GitLab'in gomulu
+  ruby'siyle `ruby -c` temiz.
+- `platform/install-monitoring.sh`: `falco` namespace yoksa en basta acik mesajla durur; 401 kontrolundeki curl
+  hatasi artik HTTP kodunu (000) gosterir.
+- Falco values: tek kaynak `helm-values/falco.yaml` (`install.sh` Falco kurmuyor). `helm template` 9.2.1, ilk kurulum
+  values (`4507e81`) ile simdiki karsilastirma: DaemonSet, ClusterRole, ServiceAccount ayni (`privileged: true`,
+  `modern_ebpf`, leastPrivileged acilmadi); fark yalnizca falcosidekick kaynaklari ve ConfigMap'te
+  `http_output` -> sidekick, `json_output: true`. Canli DaemonSet render ile ortusuyor.
+- Kapasite: dort yeni chart + sidekick requests toplami ~780m CPU / ~1.9 GiB; kumede mevcut requests 1020m / ~2.1 GiB,
+  allocatable 24 CPU / ~39 GiB, kullanim ~3.3 GiB.

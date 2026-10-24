@@ -12,6 +12,9 @@ source versions.conf
 fail() { echo "HATA: $*" >&2; exit 1; }
 [[ -n ${KUBECONFIG:-} ]] || fail "KUBECONFIG tanimsiz (admin kubeconfig gerekir)"
 kubectl auth can-i create namespaces >/dev/null || fail "bu kimlik namespace olusturamiyor (admin kubeconfig mi?)"
+# Falco onceden kurulu olmali (helm-values/falco.yaml); bu betik yalnizca Falcosidekick'i ekler, sifirdan kurmaz
+kubectl get namespace falco -o name >/dev/null 2>&1 \
+  || fail "falco namespace yok: Falco kurulu degil. Once Falco'yu helm-values/falco.yaml ile kurun, sonra tekrar calistirin"
 
 PROM_REPO=https://prometheus-community.github.io/helm-charts
 GRAFANA_REPO=https://grafana.github.io/helm-charts
@@ -61,7 +64,7 @@ for i in $(seq 1 30); do
   sleep 5
 done
 echo "   Grafana TLS (lab CA) /api/health -> 200"
-code=$(curl -s -o /dev/null -w '%{http_code}' --cacert "$CA" https://grafana.securestream.lab/api/dashboards/uid/securestream-security)
-[[ $code == 401 ]] || fail "kimliksiz dashboard istegi $code dondu, 401 bekleniyordu"
+code=$(curl -s -o /dev/null -w '%{http_code}' --cacert "$CA" https://grafana.securestream.lab/api/dashboards/uid/securestream-security || true)
+[[ $code == 401 ]] || fail "kimliksiz dashboard istegi HTTP $code dondu, 401 bekleniyordu (000 = baglanti/TLS hatasi)"
 echo "   Kimliksiz API -> 401"
 echo "==> Tamam. Falco -> Loki kaniti: ~/securestream/scripts/monitoring-falco-check.sh"
