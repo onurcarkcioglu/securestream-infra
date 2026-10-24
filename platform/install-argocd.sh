@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Argo CD (Item 10): kurulum, GitLab okuma erisimi (deploy token) ve "platform-manifests" uygulamasi.
+# Argo CD (GitOps): kurulum, GitLab okuma erisimi (deploy token) ve "platform-manifests" uygulamasi.
 # Insan calistirir, sudo OLMADAN (ssh ubuntu anahtarlariyla); kume islemleri icinde sudo + admin kubeconfig:
 #   ~/securestream/platform/install-argocd.sh
 # Deploy token (yalnizca read_repository, 90 gun) gitlab-rails'ten pipe ile Secret manifest'ine, oradan

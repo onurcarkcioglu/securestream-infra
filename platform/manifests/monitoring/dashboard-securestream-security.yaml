@@ -25,6 +25,63 @@ data:
      "refresh": "1m",
      "panels": [
       {
+       "id": 9,
+       "type": "table",
+       "title": "Firing security alerts",
+       "description": "Prometheus alerts from platform/manifests/monitoring/alert-rules.yaml (no notification channel yet: this panel is where they surface).",
+       "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+       },
+       "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 7
+       },
+       "targets": [
+        {
+         "refId": "A",
+         "expr": "ALERTS{alertstate=\"firing\", category!=\"\"}",
+         "instant": true,
+         "format": "table"
+        }
+       ],
+       "transformations": [
+        {
+         "id": "organize",
+         "options": {
+          "excludeByName": {
+           "Time": true,
+           "Value": true,
+           "__name__": true,
+           "alertstate": true
+          },
+          "indexByName": {
+           "severity": 0,
+           "category": 1,
+           "alertname": 2
+          }
+         }
+        }
+       ],
+       "options": {
+        "showHeader": true,
+        "sortBy": [
+         {
+          "displayName": "severity",
+          "desc": false
+         }
+        ]
+       },
+       "fieldConfig": {
+        "defaults": {
+         "noValue": "No firing alerts"
+        },
+        "overrides": []
+       }
+      },
+      {
        "id": 1,
        "type": "timeseries",
        "title": "Falco events by priority (Loki)",
@@ -34,7 +91,7 @@ data:
        },
        "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 7,
         "w": 12,
         "h": 8
        },
@@ -70,7 +127,7 @@ data:
        },
        "gridPos": {
         "x": 12,
-        "y": 0,
+        "y": 7,
         "w": 12,
         "h": 8
        },
@@ -100,7 +157,7 @@ data:
        },
        "gridPos": {
         "x": 0,
-        "y": 8,
+        "y": 15,
         "w": 12,
         "h": 8
        },
@@ -136,7 +193,7 @@ data:
        },
        "gridPos": {
         "x": 12,
-        "y": 8,
+        "y": 15,
         "w": 12,
         "h": 8
        },
@@ -172,7 +229,7 @@ data:
        },
        "gridPos": {
         "x": 0,
-        "y": 16,
+        "y": 23,
         "w": 12,
         "h": 8
        },
@@ -209,7 +266,7 @@ data:
        },
        "gridPos": {
         "x": 12,
-        "y": 16,
+        "y": 23,
         "w": 12,
         "h": 8
        },
@@ -246,7 +303,7 @@ data:
        },
        "gridPos": {
         "x": 0,
-        "y": 24,
+        "y": 31,
         "w": 12,
         "h": 8
        },
@@ -283,7 +340,7 @@ data:
        },
        "gridPos": {
         "x": 12,
-        "y": 24,
+        "y": 31,
         "w": 12,
         "h": 8
        },

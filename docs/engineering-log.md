@@ -287,3 +287,16 @@
 - `scripts/platform-render-check.sh`: 10 chart, 32 is yuku, 0 hata; negatif test 9 hata, exit 1.
 - `claude-readonly` RBAC yeniden uretildi: argoproj.io, monitoring.coreos.com, monitoring.grafana.com (36 grup, secrets yok).
 - Kume degisiklikleri insan tarafindan uygulanacak.
+
+## Guvenlik alarmlari (2026-10-24)
+- `platform/manifests/monitoring/alert-rules.yaml` (PrometheusRule, 8 kural): Falco kritik olay ve uyari patlamasi,
+  Falco olay hatti dusuk, Kyverno reddi ve Kyverno metrikleri yok, sertifika bitisi (< 14 gun) ve hazir degil,
+  catalog-api 5xx orani > %5. Metrik adlari ve etiketleri chart kaynagindan dogrulandi (Falcosidekick 2.31.1).
+- Yeni kazima hedefleri: Falcosidekick (`http` /metrics), cert-manager (`http-metrics`). Dashboard'a
+  "Firing security alerts" paneli (en ustte).
+- Alertmanager kapali kaldi: bildirim kanali (e-posta/Slack) insan karari; alarmlar Grafana'da gorunur.
+- `scripts/alert-rules-test.sh` + `platform/tests/alert-rules.test.yaml`: promtool 3.15.0 (kumedeki Prometheus ile
+  ayni, `install-dev-tools.sh` SHA256 ile kurar). Her alarm icin tetiklenen ve tetiklenmeyen durum; testler ilk
+  calismada iki hatayi yakaladi (absent() etiket tasimaz; 10 dakikalik ornek araligi seriyi bayatlatir). Mutasyon
+  testi (Falco filtresinden Critical cikarildi) basarisiz oldu, geri alininca yesil.
+- Betik ve yapilandirma yorumlarindaki "Item N" etiketleri is akisi adlariyla degistirildi.

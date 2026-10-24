@@ -9,8 +9,19 @@ date. The narrative version is [docs/project-history.md](docs/project-history.md
 
 ### Added
 - Project history, changelog and documentation index for the public repository.
+- Security alerting: 8 Prometheus rules (Falco, Kyverno, cert-manager, catalog-api) with promtool unit tests,
+  Falcosidekick and cert-manager scrape targets, "Firing security alerts" dashboard panel.
+- `scripts/platform-render-check.sh`: renders every platform chart and enforces requests/limits and namespace PSA levels.
+- Pod Security Admission level for every platform namespace (`platform/manifests/namespaces.yaml`).
+
+### Security
+- Kubescape High findings fixed in values: Falco least privilege, Kyverno without hostPath (lab CA from a
+  ConfigMap), MetalLB without the frr-k8s BGP backend, requests and limits for every container.
+- node-exporter moved to its own namespace; `monitoring` enforces `baseline`.
+- Argo CD ApplicationSet controller really disabled (`replicas: 0`; the old key was ignored by the chart).
 
 ### Changed
+- `platform/install.sh` installs Kyverno and External Secrets with values files and verifies the result.
 - Published documents use workstream names instead of internal item and sprint labels.
 
 ## 2026-10-24

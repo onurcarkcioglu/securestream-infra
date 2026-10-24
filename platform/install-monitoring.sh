@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Izleme yigini (Item 9): Loki, kube-prometheus-stack (Prometheus + Grafana), Alloy, Falcosidekick -> Loki,
-# Grafana admin sirri (ESO), kazima hedefleri ve "SecureStream Security" dashboard'u.
+# Izleme yigini: Loki, kube-prometheus-stack (Prometheus + Grafana), Alloy, Falcosidekick -> Loki,
+# Grafana admin sirri (ESO), kazima hedefleri, guvenlik alarm kurallari ve "SecureStream Security" dashboard'u.
 # Insan calistirir, admin kubeconfig ile:
 #   sudo KUBECONFIG=/etc/securestream/admin.kubeconfig ~/securestream/platform/install-monitoring.sh
 # Chart'lar --repo ile cekilir (root icin helm repo add gerekmez); surumler versions.conf'ta.
@@ -45,8 +45,9 @@ echo "==> Alloy ${ALLOY_CHART_VERSION}"
 helm upgrade --install alloy alloy --repo "$GRAFANA_REPO" --version "$ALLOY_CHART_VERSION" \
   -n monitoring -f helm-values/alloy.yaml --wait --timeout 10m
 
-echo "==> Kazima hedefleri ve dashboard"
+echo "==> Kazima hedefleri, guvenlik alarm kurallari ve dashboard"
 kubectl apply -f manifests/monitoring/scrape-targets.yaml
+kubectl apply -f manifests/monitoring/alert-rules.yaml
 kubectl apply -f manifests/monitoring/dashboard-securestream-security.yaml
 
 echo "==> Falco ${FALCO_CHART_VERSION} + Falcosidekick (Loki cikisi)"

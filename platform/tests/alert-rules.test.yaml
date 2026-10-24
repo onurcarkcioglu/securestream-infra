@@ -1,0 +1,174 @@
+# promtool birim testleri: platform/manifests/monitoring/alert-rules.yaml (scripts/alert-rules-test.sh calistirir).
+# Her alarm icin tetiklenen ve tetiklenmeyen (negatif) durum.
+rule_files:
+  - alert-rules.yaml
+evaluation_interval: 1m
+
+tests:
+  # Kritik Falco olayi alarm uretir; Notice olayi uretmez
+  - interval: 1m
+    input_series:
+      - series: 'falcosecurity_falcosidekick_falco_events_total{priority="Critical", rule="Terminal shell in container", source="syscalls"}'
+        values: '0 0 1 1 1'
+      - series: 'falcosecurity_falcosidekick_falco_events_total{priority="Notice", rule="Contact K8S API Server From Container", source="syscalls"}'
+        values: '0 5 10 15 20'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: FalcoCriticalEvent
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              category: runtime
+              rule: Terminal shell in container
+              priority: Critical
+            exp_annotations:
+              summary: "Falco: Terminal shell in container (Critical)"
+              description: "Falco reported a Critical event in the last 5 minutes. Loki: {rule=\"Terminal shell in container\"}."
+      - eval_time: 4m
+        alertname: FalcoWarningBurst
+        exp_alerts: []
+
+  # Ayni kural 15 dakikada 5'ten fazla Warning: alarm; 3 Warning: alarm yok
+  - interval: 1m
+    input_series:
+      - series: 'falcosecurity_falcosidekick_falco_events_total{priority="Warning", rule="Read sensitive file untrusted", source="syscalls"}'
+        values: '0+1x15'
+      - series: 'falcosecurity_falcosidekick_falco_events_total{priority="Warning", rule="Redirect STDOUT/STDIN to Network Connection in Container", source="syscalls"}'
+        values: '0 0 0 1 2 3 3 3 3 3 3 3 3 3 3 3'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: FalcoWarningBurst
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              category: runtime
+              rule: Read sensitive file untrusted
+            exp_annotations:
+              summary: "Falco: Read sensitive file untrusted fired 15 times in 15 minutes"
+              description: "Repeated warning-level Falco events; check the rule and the workload in Loki."
+
+  # Falcosidekick hedefi 10 dakikadan uzun dusuk: alarm; saglikli hedef: alarm yok
+  - interval: 1m
+    input_series:
+      - series: 'up{namespace="falco", service="falco-falcosidekick"}'
+        values: '0x15'
+      - series: 'up{namespace="kyverno", service="kyverno-svc-metrics"}'
+        values: '1x15'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: FalcoEventPipelineDown
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: FalcoEventPipelineDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              category: runtime
+            exp_annotations:
+              summary: "Falcosidekick is not scraped: Falco events may not reach Loki"
+              description: "No healthy falco-falcosidekick target for 10 minutes. Runtime detection is blind until it is back."
+      - eval_time: 12m
+        alertname: KyvernoMetricsDown
+        exp_alerts: []
+  - interval: 1m
+    input_series:
+      - series: 'up{namespace="falco", service="falco-falcosidekick"}'
+        values: '1x15'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: FalcoEventPipelineDown
+        exp_alerts: []
+      # Kyverno hic kazinmiyorsa (seri yok) de alarm
+      - eval_time: 12m
+        alertname: KyvernoMetricsDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              category: admission
+            exp_annotations:
+              summary: "No Kyverno metrics target is up"
+              description: "Kyverno controllers are not scraped for 10 minutes; admission control may be down (webhook failure policy decides whether pods are admitted)."
+
+  # Kyverno reddi: alarm; yalnizca izin verilen istekler: alarm yok
+  - interval: 1m
+    input_series:
+      - series: 'kyverno_admission_requests_total{request_allowed="false", resource_namespace="catalog", resource_kind="Pod"}'
+        values: '0 0 1 1'
+      - series: 'kyverno_admission_requests_total{request_allowed="true", resource_namespace="monitoring", resource_kind="Pod"}'
+        values: '0 10 20 30'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: KyvernoAdmissionDenied
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              category: admission
+              resource_namespace: catalog
+              resource_kind: Pod
+            exp_annotations:
+              summary: "Kyverno denied Pod in catalog"
+              description: "An admission request was rejected (unsigned image or policy violation). Runbook: docs/runbooks/unsigned-image-rejected.md."
+
+  # Sertifika 7 gun sonra bitiyor: alarm; 60 gun sonra: alarm yok. Hazir olmayan sertifika: alarm.
+  # (ornek araligi 1m: 5 dakikalik bakis penceresinden uzun aralik seriyi arada bayat yapar, "for" sifirlanir)
+  - interval: 1m
+    input_series:
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="monitoring", name="grafana-tls"}'
+        values: '604800x130'
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="argocd", name="argocd-server-tls"}'
+        values: '5184000x130'
+      - series: 'certmanager_certificate_ready_status{namespace="catalog", name="catalog-tls", condition="False"}'
+        values: '1x130'
+      - series: 'certmanager_certificate_ready_status{namespace="catalog", name="catalog-tls", condition="True"}'
+        values: '0x130'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: CertificateExpiringSoon
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              category: pki
+              namespace: monitoring
+              name: grafana-tls
+            exp_annotations:
+              summary: "Certificate monitoring/grafana-tls expires in 6d 22h 0m 0s"
+              description: "cert-manager has not renewed it yet; check the Certificate and the ClusterIssuer."
+      - eval_time: 2h
+        alertname: CertificateNotReady
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              category: pki
+              namespace: catalog
+              name: catalog-tls
+            exp_annotations:
+              summary: "Certificate catalog/catalog-tls is not ready"
+              description: "cert-manager reports Ready=False for 15 minutes."
+
+  # catalog-api: %10 5xx 10 dakika: alarm; %1 5xx: alarm yok
+  - interval: 1m
+    input_series:
+      - series: 'traefik_service_requests_total{service="catalog-catalog-api-80@kubernetes", code="200"}'
+        values: '0+90x20'
+      - series: 'traefik_service_requests_total{service="catalog-catalog-api-80@kubernetes", code="500"}'
+        values: '0+10x20'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: CatalogApiHighErrorRate
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              category: application
+            exp_annotations:
+              summary: "catalog-api 5xx ratio 10%"
+              description: "More than 5 % of requests through the ingress failed with 5xx for 10 minutes."
+  - interval: 1m
+    input_series:
+      - series: 'traefik_service_requests_total{service="catalog-catalog-api-80@kubernetes", code="200"}'
+        values: '0+99x20'
+      - series: 'traefik_service_requests_total{service="catalog-catalog-api-80@kubernetes", code="500"}'
+        values: '0+1x20'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: CatalogApiHighErrorRate
+        exp_alerts: []
