@@ -334,3 +334,11 @@
 - Sira: catalog-api main pipeline'i provenance'li imaji yayinlar -> politika uygulanir -> rollout restart (pozitif),
   calisan eski imaj (imzali, provenance'siz) dry-run ile reddedilmeli (negatif).
 - CLAUDE.md "Known gaps" guncellendi (Loki, Prometheus/Grafana, Hadolint/Checkov artik var).
+## Kume uygulama sonuclari ve SLSA geri alma (2026-10-24)
+- Insan uyguladi ve test etti: `install.sh` (PSA seviyeleri, default SA token kapali), `install-monitoring.sh` (Falco
+  least privilege, node-exporter kendi namespace'inde, monitoring baseline; falco-check 12:14:56Z Notice),
+  `install-argocd.sh` (gercek token rotasyonu, eski token 1 iptal); her birinden sonra `hc.sh` yesil.
+- SLSA politikasi: provenance'li yeni imaj (2c9bd03c…) da reddedildi; politika `db3f0b2` surumune geri alindi,
+  iki imzali imaj kabul edildi. Kok neden acik (ders #43). Repodaki politika SLSA surumu: kume ile fark var.
+- unsigned-test: MANIFEST_UNKNOWN (tag yok), fail-closed; imza reddinin kaniti degil.
+- NetworkPolicy rollout uygulanmadi (ertelendi). Ders #44: insan betik calistirirken ayni kopyada checkout yok, worktree.
