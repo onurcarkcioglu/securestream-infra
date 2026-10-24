@@ -359,9 +359,8 @@ Next for the human:
 - `unsigned-test`: denied with `MANIFEST_UNKNOWN` (the tag does not exist). No TLS/CA error and the request failed
   closed, but this does not prove signature rejection: a pushed unsigned image is still needed for that.
 - Platform NetworkPolicy rollout: not applied (deferred).
-- Drift: `platform/manifests/kyverno-verify-images.yaml` on `main` is the SLSA version, the cluster runs `db3f0b2`.
-  Argo CD (manual sync) should report it as drift (not checked: `claude-readonly` cannot read `argoproj.io`); do not
-  sync that file until the root cause is fixed.
+- Drift closed: main = cluster. `platform/manifests/kyverno-verify-images.yaml` on `main` is back to the
+  signature-only `db3f0b2` version; the SLSA version stays on branch `feat/kyverno-slsa-provenance` (lessons learned #43).
 
 ### Notes (monitoring, SBOM monitoring and GitOps, 2026-10-23)
 
