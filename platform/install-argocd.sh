@@ -35,8 +35,9 @@ echo "==> Yeni GitLab deploy token $TOKEN_NAME (read_repository, 90 gun) -> Secr
 RB_CREATE=$(cat <<'RUBY'
 p = Project.find_by_full_path("securestream/securestream") or abort "HATA: proje yok"
 admin = User.find_by_username("root") or abort "HATA: root yok"
-res = DeployTokens::CreateService.new(p, admin, name: "__NAME__", read_repository: true,
-  expires_at: 90.days.from_now).execute
+# GitLab 19.x: Projects::DeployTokens::CreateService.new(project, user, params)
+res = Projects::DeployTokens::CreateService.new(p, admin,
+  { name: "__NAME__", read_repository: true, expires_at: 90.days.from_now }).execute
 abort "HATA: deploy token olusturulamadi: #{res[:message]}" unless res[:status] == :success
 t = res[:deploy_token]
 puts "TOKEN #{t.username} #{t.token}"
