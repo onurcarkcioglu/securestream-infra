@@ -300,3 +300,15 @@
   calismada iki hatayi yakaladi (absent() etiket tasimaz; 10 dakikalik ornek araligi seriyi bayatlatir). Mutasyon
   testi (Falco filtresinden Critical cikarildi) basarisiz oldu, geri alininca yesil.
 - Betik ve yapilandirma yorumlarindaki "Item N" etiketleri is akisi adlariyla degistirildi.
+
+## Platform NetworkPolicy (2026-10-24)
+- `platform/manifests/network-policies/`: 9 namespace icin varsayilan giris yasagi + acik izinler. Webhook'lar
+  `failurePolicy: Fail` (Kyverno pod olusturma webhook'u kube-system/kyverno disinda tum namespace'ler): API sunucusu
+  kaynaklari yalnizca ss-k3s-cp'nin dugum IP'si, flannel.1 (10.42.0.0) ve cni0 (10.42.0.1) adresleri.
+- Cikis bu asamada acik (API sunucusu, Vault, registry, GitLab, Falco kural indirme ayri kurallar ister).
+- `scripts/netpol-check.py` (salt okunur): secici ve port kontrolu; uygulamadan once Kyverno controller'larinda
+  `metrics-port` yerine `metrics` port adini yakaladi (8000 numarasi kullanildi).
+- `scripts/netpol-rollout.sh` (insan, admin kubeconfig): namespace basina uygula, test et (webhook dry-run, ingress
+  HTTPS, Falco -> Loki kaniti, Kyverno imzasiz imaji hala reddetmeli), basarisizsa o namespace'in politikalarini sil.
+- Insanin araya giren istegi: catalog-api rollout restart ve imzasiz imaj testi henuz calismamis (revizyon 19,
+  pod'lar 14 saatlik, restartedAt yok); dry-run iz birakmadigi icin sonucu yalnizca komut ciktisinda gorunur.

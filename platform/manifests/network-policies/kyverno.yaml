@@ -1,0 +1,46 @@
+# Kyverno: varsayilan giris yasak; admission ve cleanup webhook'lari yalnizca API sunucusundan, metrikler Prometheus'tan.
+# Not: pod olusturma webhook'u failurePolicy Fail; erisim kesilirse kube-system/kyverno disinda pod olusturulamaz.
+# scripts/netpol-rollout.sh bu yuzden webhook'u hemen test eder ve basarisizsa politikalari geri alir.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: kyverno
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-apiserver-to-webhooks
+  namespace: kyverno
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/component, operator: In, values: [admission-controller, cleanup-controller] }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        # API sunucusu (yalnizca ss-k3s-cp): dugum IP, flannel.1 (baska dugume), cni0 (ayni dugume)
+        - ipBlock: { cidr: 10.10.10.20/32 }
+        - ipBlock: { cidr: 10.42.0.0/32 }
+        - ipBlock: { cidr: 10.42.0.1/32 }
+      ports: [{ port: https, protocol: TCP }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-metrics
+  namespace: kyverno
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: monitoring }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: prometheus }
+      # admission controller'da port adi metrics-port, digerlerinde metrics; numara hepsinde 8000
+      ports: [{ port: 8000, protocol: TCP }]

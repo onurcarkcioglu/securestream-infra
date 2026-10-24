@@ -1,0 +1,71 @@
+# Izleme: varsayilan giris yasak; namespace ici serbest (Grafana->Prometheus/Loki, Alloy->Loki, Prometheus kazima),
+# Grafana yalnizca Traefik'ten, Loki push'u Falcosidekick'ten, operator webhook'u API sunucusundan.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-traefik-to-grafana
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: grafana }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: traefik }
+      ports: [{ port: grafana, protocol: TCP }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-falcosidekick-to-loki
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: loki }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: falco }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: falcosidekick }
+      ports: [{ port: http-metrics, protocol: TCP }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-apiserver-to-operator-webhook
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels: { app: kube-prometheus-stack-operator }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        # API sunucusu (yalnizca ss-k3s-cp): dugum IP, flannel.1 (baska dugume), cni0 (ayni dugume)
+        - ipBlock: { cidr: 10.10.10.20/32 }
+        - ipBlock: { cidr: 10.42.0.0/32 }
+        - ipBlock: { cidr: 10.42.0.1/32 }
+      ports: [{ port: https, protocol: TCP }]

@@ -1,0 +1,24 @@
+# demo (whoami): varsayilan giris yasak; yalnizca Traefik'ten.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: demo
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-traefik
+  namespace: demo
+spec:
+  podSelector:
+    matchLabels: { app: whoami }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: traefik }
+      ports: [{ port: 8080, protocol: TCP }]
