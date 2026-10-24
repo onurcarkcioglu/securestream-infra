@@ -17,6 +17,8 @@ spec:
     metadata:
       labels: { app: whoami }
     spec:
+      # API erisimi gerekmez (CIS 5.1.5/5.1.6)
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534

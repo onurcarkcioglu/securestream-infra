@@ -49,6 +49,23 @@
     port: 6443
     timeout: 300
 
+# CIS 1.1.20 (kube-bench k3s-cis-1.9): k3s PKI sertifikalarini 0644 yazar; yalnizca root (k3s) okur.
+# Anahtarlar (*.key) k3s tarafindan zaten 0600. Icerik okunmaz, yalnizca izin degisir.
+- name: k3s PKI sertifika dosyalari
+  ansible.builtin.find:
+    paths: /var/lib/rancher/k3s/server/tls
+    patterns: "*.crt"
+    recurse: true
+  register: k3s_tls_crt
+
+- name: k3s PKI sertifikalari 0600
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: "0600"
+  loop: "{{ k3s_tls_crt.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+
 # Admin kubeconfig ss-mgmt'de yalnizca root'un (scripts/kubeconfig-lockdown.sh): ubuntu kullanicisinin
 # ~/.kube/config'i salt okunur claude-readonly kimligi. Admin islemleri: sudo kubectl --kubeconfig <dosya>.
 - name: ss-mgmt'de admin kubeconfig klasoru (root)

@@ -49,6 +49,10 @@ repoServer:
     limits: { cpu: 500m, memory: 512Mi }
 
 redis:
+  # default ServiceAccount yerine kendi SA'si, token mount yok (CIS 5.1.5/5.1.6)
+  serviceAccount:
+    create: true
+    automountServiceAccountToken: false
   resources:
     requests: { cpu: 20m, memory: 32Mi }
     limits: { cpu: 200m, memory: 128Mi }
