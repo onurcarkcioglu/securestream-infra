@@ -76,6 +76,6 @@ kubectl -n catalog get pods,ingress,externalsecret
 ```
 
 ## Known gaps (roadmap)
-GitLab 2FA, central logging (Loki), Prometheus/Grafana, kubelet checks (kube-bench; Kubescape runs without host scan), a separate Unix user for the AI
-assistant (only the read-only kubeconfig, no sudo),
-Hadolint/Checkov/kube-linter, SLSA provenance. See `docs/security-controls.md`.
+GitLab 2FA, an alert notification channel (Alertmanager is off), egress NetworkPolicies, Argo CD detect-only
+(read-only RBAC), a separate Unix user for the AI assistant (only the read-only kubeconfig, no sudo), kube-linter,
+SLSA Build L3 (isolated signing). See `docs/security-controls.md`.

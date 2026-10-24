@@ -18,6 +18,7 @@ date. The narrative version is [docs/project-history.md](docs/project-history.md
 - CIS node benchmark with kube-bench (`k3s-cis-1.9`) through Ansible; raw reports are sanitised on the node.
 
 ### Security
+- SLSA v1 build provenance for catalog-api images, required by Kyverno at admission (source and builder checked).
 - Kubescape High findings fixed in values: Falco least privilege, Kyverno without hostPath (lab CA from a
   ConfigMap), MetalLB without the frr-k8s BGP backend, requests and limits for every container.
 - node-exporter moved to its own namespace; `monitoring` enforces `baseline`.

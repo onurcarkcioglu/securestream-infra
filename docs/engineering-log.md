@@ -322,3 +322,15 @@
 - 5.1.5/5.1.6: whoami token mount etmez, argocd-redis kendi SA'si, platform namespace'lerinde default SA automount
   kapali (kume uygulamasi insanda). 1.2.26 (etcd yok, SQLite) ve 5.1.3 (sistem/chart rolleri) gerekceli.
 - Ders #42: check modunda atlanan blok always'i de atlar; bos gecici dizinler silindi.
+## SLSA build provenance (2026-10-24)
+- catalog-api `feat/slsa-provenance`: `ci/slsa-provenance.sh` (POSIX sh; cosign imajinda bash/jq yok) SLSA v1 predicate
+  uretir: kaynak repo + commit, ci-templates tag'i, PYTHON_IMAGE ve KANIKO_IMAGE digest'leri, pipeline kimligi.
+  Digest'siz imaji ve JSON kacisi gerektiren degerleri reddeder; 6 birim testi.
+- `sign`: `cosign attest --type slsaprovenance1` + `verify-attestation`. Ayrica bulunan hata: `cosign verify ... && echo`
+  zincirinde dogrulama hatasi set -e'yi tetiklemiyordu (son satir disinda is yesil kalirdi); dogrulamalar ayri komut.
+- Kyverno `verify-securestream-images`: imzaya ek olarak ayni anahtarla imzali provenance, kaynak securestream grubu,
+  builder lab runner'i (`verifyAttestationSignatures` + `extractPayload`, Kyverno belgelerinden dogrulandi).
+- SLSA Build L2; L3 degil (provenance is icinde CI degiskenindeki anahtarla imzalaniyor).
+- Sira: catalog-api main pipeline'i provenance'li imaji yayinlar -> politika uygulanir -> rollout restart (pozitif),
+  calisan eski imaj (imzali, provenance'siz) dry-run ile reddedilmeli (negatif).
+- CLAUDE.md "Known gaps" guncellendi (Loki, Prometheus/Grafana, Hadolint/Checkov artik var).
