@@ -36,6 +36,12 @@ prometheus:
               storage: 10Gi
 
 prometheusOperator:
+  # Kurulum hook Job'lari (admission webhook sertifikasi)
+  admissionWebhooks:
+    patch:
+      resources:
+        requests: { cpu: 10m, memory: 32Mi }
+        limits: { cpu: 100m, memory: 128Mi }
   resources:
     requests: { cpu: 50m, memory: 64Mi }
     limits: { cpu: 200m, memory: 256Mi }
@@ -45,7 +51,10 @@ kube-state-metrics:
     requests: { cpu: 20m, memory: 64Mi }
     limits: { cpu: 200m, memory: 256Mi }
 
+# node-exporter host ag/PID ve salt okunur host mount'lari ister: PSA privileged yalnizca kendi namespace'inde,
+# monitoring namespace'i baseline zorlar (manifests/monitoring/namespace.yaml)
 prometheus-node-exporter:
+  namespaceOverride: node-exporter
   resources:
     requests: { cpu: 20m, memory: 32Mi }
     limits: { cpu: 200m, memory: 128Mi }
@@ -89,6 +98,9 @@ grafana:
       url: http://loki.monitoring.svc.cluster.local:3100
   # Dashboard'lar ConfigMap'ten (grafana_dashboard: "1" etiketi), tum namespace'lerden
   sidecar:
+    resources:
+      requests: { cpu: 10m, memory: 32Mi }
+      limits: { cpu: 100m, memory: 128Mi }
     dashboards:
       enabled: true
       label: grafana_dashboard

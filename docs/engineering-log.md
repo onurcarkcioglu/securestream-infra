@@ -269,3 +269,21 @@
   `Iso8601DateValidator` ham degeri `Date.iso8601` ile okur; `TimeWithZone` yerine `to_date.iso8601`. Olusturmadan
   once `DeployToken.new(...).valid?` ile kaydetmeden dogrulama (ders #39); salt okunur testte eski deger gecersiz,
   yeni deger gecerli, `persisted=false`, token sayisi 0.
+
+## Platform sertlestirme: Kubescape High bulgulari ve PSA (2026-10-24)
+- Once mevcut values canli durumla karsilastirildi (render ile canli is yukleri, env yalnizca adlariyla): Kyverno,
+  ESO, MetalLB, cert-manager, Traefik, Falco birebir ayni. Release adlari `meta.helm.sh/release-name` ile dogrulandi.
+- Falco: `driver.modernEbpf.leastPrivileged: true` (privileged yerine BPF, PERFMON, SYS_RESOURCE, SYS_PTRACE);
+  docker/podman kapali, cri yalnizca k3s soketi: bes gereksiz host mount'u kalkti.
+- Kyverno: guven deposu yalnizca lab root CA (`global.caCertificates.data`, ConfigMap); hostPath yok. Registry zinciri
+  yalnizca lab root ile dogrulaniyor, yalnizca genel root ile curl exit 60 (`--capath` bos dizin: ders #27).
+- MetalLB: L2 modunda frr-k8s (SYS_ADMIN) gereksizdi, `frrk8s.enabled: false` (`helm-values/metallb.yaml`).
+- Her konteyner, init konteyner ve hook Job'unda istek+limit (`external-secrets.yaml` yeni, digerleri eklendi).
+- Argo CD: `applicationSet.enabled` anahtari chart'ta yok, denetleyici calisiyordu; `replicas: 0` (ders #40).
+- PSA: k3s'te kume varsayilani yok. `manifests/namespaces.yaml`: restricted (cert-manager, external-secrets, traefik,
+  kyverno, argocd, demo, default), privileged + warn baseline (falco, metallb-system). node-exporter kendi
+  namespace'inde, `monitoring` baseline. `install.sh` etiketleri sunucu tarafi dry-run uyarisizsa uygular.
+- `install.sh`: Kyverno ve External Secrets ilk kez values ile; `--repo`, admin kubeconfig kontrolu, dogrulama.
+- `scripts/platform-render-check.sh`: 10 chart, 32 is yuku, 0 hata; negatif test 9 hata, exit 1.
+- `claude-readonly` RBAC yeniden uretildi: argoproj.io, monitoring.coreos.com, monitoring.grafana.com (36 grup, secrets yok).
+- Kume degisiklikleri insan tarafindan uygulanacak.

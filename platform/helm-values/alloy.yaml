@@ -40,3 +40,7 @@ alloy:
           url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
         }
       }
+configReloader:
+  resources:
+    requests: { cpu: 10m, memory: 50Mi }
+    limits: { cpu: 100m, memory: 128Mi }

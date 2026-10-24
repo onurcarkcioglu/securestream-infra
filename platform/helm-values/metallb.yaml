@@ -1,0 +1,14 @@
+# MetalLB yalnizca L2 (ARP) modunda (manifests/metallb-pool.yaml: L2Advertisement, BGPPeer yok).
+# Chart varsayilani frr-k8s BGP arka ucunu da kurar: her dugumde SYS_ADMIN/NET_ADMIN ile FRR (Kubescape C-0046,
+# C-0057). BGP kullanilmadigi icin kapatilir; speaker L2 icin hostNetwork + NET_RAW ile calismaya devam eder.
+frrk8s:
+  enabled: false
+# Istek/limit (Kubescape C-0270/C-0271); olculen kullanim controller ~56 MiB, speaker ~24 MiB
+controller:
+  resources:
+    requests: { cpu: 10m, memory: 64Mi }
+    limits: { cpu: 100m, memory: 256Mi }
+speaker:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { cpu: 100m, memory: 128Mi }

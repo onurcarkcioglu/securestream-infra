@@ -18,3 +18,8 @@ ingressRoute:
 providers:
   kubernetesIngress:
     enabled: true
+
+# Istek/limit (Kubescape C-0270/C-0271); olculen kullanim ~32 MiB
+resources:
+  requests: { cpu: 50m, memory: 64Mi }
+  limits: { cpu: 500m, memory: 256Mi }

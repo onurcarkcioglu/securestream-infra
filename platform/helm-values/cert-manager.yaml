@@ -1,3 +1,19 @@
 # CRD'ler chart ile birlikte kurulur ve güncellenir
 crds:
   enabled: true
+# Istek/limit (Kubescape C-0270/C-0271); olculen kullanim 12-63 MiB
+resources:
+  requests: { cpu: 10m, memory: 64Mi }
+  limits: { cpu: 200m, memory: 256Mi }
+webhook:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { cpu: 100m, memory: 128Mi }
+cainjector:
+  resources:
+    requests: { cpu: 10m, memory: 64Mi }
+    limits: { cpu: 200m, memory: 512Mi }
+startupapicheck:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { cpu: 100m, memory: 128Mi }

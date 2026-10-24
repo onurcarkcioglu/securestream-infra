@@ -1,4 +1,4 @@
-# Argo CD (Item 10): platform manifest'lerinin GitOps gorunurlugu. Yalnizca bu depo (GitLab, lab CA ile),
+# Argo CD (GitOps): platform manifest'lerinin GitOps gorunurlugu. Yalnizca bu depo (GitLab, lab CA ile),
 # senkronizasyon elle (otomatik sync yok): Argo CD sapmayi gosterir, uygulama karari insanda kalir.
 # Dex, bildirimler ve ApplicationSet kapali. Admin sifresi Argo CD'nin urettigi argocd-initial-admin-secret'ta;
 # insan okur, degistirir ve o Secret'i siler.
@@ -23,8 +23,9 @@ dex:
   enabled: false
 notifications:
   enabled: false
+# Chart 10.x'te applicationSet.enabled anahtari yok; denetleyici replicas: 0 ile kapatilir
 applicationSet:
-  enabled: false
+  replicas: 0
 
 server:
   resources:
@@ -51,3 +52,9 @@ redis:
   resources:
     requests: { cpu: 20m, memory: 32Mi }
     limits: { cpu: 200m, memory: 128Mi }
+
+# Kurulum hook Job'u (redis sifresi kume icinde uretilir)
+redisSecretInit:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { cpu: 100m, memory: 128Mi }

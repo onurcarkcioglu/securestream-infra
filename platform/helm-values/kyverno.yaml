@@ -1,17 +1,23 @@
 # Lab: tek replika yeterli (uretimde admission controller en az 3 replika olmali).
+# Kyverno yalnizca lab registry'sindeki (registry.securestream.lab) imzalari dogrular: guven deposu yalnizca lab root
+# CA'si. Sertifika (gizli degil) install.sh icinde --set-file global.caCertificates.data ile verilir; chart onu
+# ConfigMap olarak salt okunur baglar. Host sertifika deposu (hostPath) kullanilmaz: kyverno namespace'i PSA
+# restricted olabilir (Kubescape C-0045/C-0048). Genel registry imzasi dogrulanacaksa o CA buraya eklenmeli.
+# CPU limitleri eklendi (Kubescape C-0270); istek ve bellek limitleri chart varsayilani.
 admissionController:
   replicas: 1
+  container:
+    resources:
+      limits: { cpu: "1" }
 backgroundController:
   replicas: 1
+  resources:
+    limits: { cpu: 500m }
 cleanupController:
   replicas: 1
+  resources:
+    limits: { cpu: 500m }
 reportsController:
   replicas: 1
-# Node'un sertifika deposu (lab CA dahil, ca_trust rolu ekledi) Kyverno'ya baglanir:
-# hem lab registry'ye hem genel registry'lere guvenir.
-global:
-  caCertificates:
-    volume:
-      hostPath:
-        path: /etc/ssl/certs/ca-certificates.crt
-        type: File
+  resources:
+    limits: { cpu: 500m }

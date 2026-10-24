@@ -39,3 +39,8 @@ chunksCache: { enabled: false }
 resultsCache: { enabled: false }
 lokiCanary: { enabled: false }
 test: { enabled: false }
+# Kural sidecar'i (loki-sc-rules): istek/limit
+sidecar:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { cpu: 100m, memory: 128Mi }

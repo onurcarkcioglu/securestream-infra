@@ -1,0 +1,81 @@
+# Platform namespace'leri ve Pod Security Admission seviyeleri. k3s'te kume geneli PSA varsayilani yok: etiketsiz
+# namespace fiilen privileged. Her namespace, is yuklerinin karsiladigi en siki seviyeyle etiketlenir (render ile
+# dogrulanir: scripts/platform-render-check.sh). Istisnalar ve gerekceleri: docs/security-controls.md.
+# monitoring ve node-exporter: manifests/monitoring/namespace.yaml; catalog: namespace-catalog.yaml.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-secrets
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: traefik
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kyverno
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+# default namespace'te is yuku yok; elle olusturulan pod'lar en siki seviyeye tabi
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+# MetalLB speaker L2 (ARP) icin hostNetwork + NET_RAW ister: baseline uygulanamaz (gerekceli istisna)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: metallb-system
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/audit: baseline
+---
+# Falco eBPF ile cekirdek olaylarini okur: BPF/PERFMON/SYS_RESOURCE/SYS_PTRACE ve salt okunur host mount'lari
+# (gerekceli istisna; privileged degil, leastPrivileged modu)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: falco
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/audit: baseline

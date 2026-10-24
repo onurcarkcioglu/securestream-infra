@@ -1,13 +1,24 @@
 # Kernel 6.8: modern eBPF surucusu (kernel modulu derlemeye gerek yok).
 driver:
   kind: modern_ebpf
+  # privileged yerine yalnizca BPF, PERFMON, SYS_RESOURCE, SYS_PTRACE (Kubescape C-0057)
+  modernEbpf:
+    leastPrivileged: true
 tty: true
-# k3s containerd soketi standart yolda degil; container plugin'ine acikca veriyoruz.
+# k3s containerd soketi standart yolda degil; container plugin'ine acikca veriyoruz. Kumede yalnizca k3s containerd
+# var: docker/podman kapali, cri yalnizca k3s soketi. Chart her soket dizinini host'tan baglar; boylece
+# /var/run, /run/podman, /run/containerd, /run/crio, /run/host-containerd mount'lari kalkar (Kubescape C-0048).
 collectors:
   containerEngine:
     engines:
       containerd:
         sockets: ["/run/k3s/containerd/containerd.sock"]
+      cri:
+        sockets: ["/run/k3s/containerd/containerd.sock"]
+      docker:
+        enabled: false
+      podman:
+        enabled: false
 # Falco olaylari Falcosidekick uzerinden Loki'ye (Item 9). Etiketler: rule, source, priority, tags.
 falcosidekick:
   enabled: true
@@ -20,3 +31,14 @@ falcosidekick:
       hostport: http://loki.monitoring.svc.cluster.local:3100
       format: json
       minimumpriority: notice
+# falcoctl (kural guncelleme) konteynerleri: chart varsayilaninda istek/limit yok (Kubescape C-0270/C-0271)
+falcoctl:
+  artifact:
+    install:
+      resources:
+        requests: { cpu: 10m, memory: 32Mi }
+        limits: { cpu: 100m, memory: 128Mi }
+    follow:
+      resources:
+        requests: { cpu: 10m, memory: 32Mi }
+        limits: { cpu: 100m, memory: 128Mi }
