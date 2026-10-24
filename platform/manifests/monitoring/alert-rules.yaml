@@ -1,0 +1,107 @@
+# Guvenlik alarm kurallari (Prometheus). Alertmanager kapali: bildirim kanali yok, alarmlar Grafana'da
+# ("SecureStream Security" -> Firing alerts) ve Prometheus'ta gorunur. Kanal secildiginde (e-posta, Slack)
+# Alertmanager acilir; kurallar degismez. Birim testleri: platform/tests/alert-rules.test.yaml,
+# scripts/alert-rules-test.sh (promtool, surum versions.conf'ta).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: securestream-security
+  namespace: monitoring
+spec:
+  groups:
+    - name: securestream.runtime
+      rules:
+        # Falco olaylari Falcosidekick'ten gecer; kritik bir kural tek olayda alarm uretir
+        - alert: FalcoCriticalEvent
+          expr: >-
+            sum by (rule, priority) (
+              increase(falcosecurity_falcosidekick_falco_events_total{priority=~"(?i)critical|alert|emergency"}[5m])
+            ) > 0
+          labels:
+            severity: critical
+            category: runtime
+          annotations:
+            summary: "Falco: {{ $labels.rule }} ({{ $labels.priority }})"
+            description: "Falco reported a {{ $labels.priority }} event in the last 5 minutes. Loki: {rule=\"{{ $labels.rule }}\"}."
+        - alert: FalcoWarningBurst
+          expr: >-
+            sum by (rule) (
+              increase(falcosecurity_falcosidekick_falco_events_total{priority=~"(?i)error|warning"}[15m])
+            ) > 5
+          labels:
+            severity: warning
+            category: runtime
+          annotations:
+            summary: "Falco: {{ $labels.rule }} fired {{ $value | humanize }} times in 15 minutes"
+            description: "Repeated warning-level Falco events; check the rule and the workload in Loki."
+        # Olay hatti calismiyorsa "olay yok" sessizligi guvence degildir
+        - alert: FalcoEventPipelineDown
+          expr: >-
+            absent(up{namespace="falco", service="falco-falcosidekick"} == 1)
+          for: 10m
+          labels:
+            severity: critical
+            category: runtime
+          annotations:
+            summary: "Falcosidekick is not scraped: Falco events may not reach Loki"
+            description: "No healthy falco-falcosidekick target for 10 minutes. Runtime detection is blind until it is back."
+    - name: securestream.admission
+      rules:
+        # Kyverno reddi kontrolun calistigini gosterir, ama imzasiz/yetkisiz bir dagitim denemesidir
+        - alert: KyvernoAdmissionDenied
+          expr: >-
+            sum by (resource_namespace, resource_kind) (
+              increase(kyverno_admission_requests_total{request_allowed="false"}[10m])
+            ) > 0
+          labels:
+            severity: warning
+            category: admission
+          annotations:
+            summary: "Kyverno denied {{ $labels.resource_kind }} in {{ $labels.resource_namespace }}"
+            description: "An admission request was rejected (unsigned image or policy violation). Runbook: docs/runbooks/unsigned-image-rejected.md."
+        - alert: KyvernoMetricsDown
+          expr: >-
+            absent(up{namespace="kyverno"} == 1)
+          for: 10m
+          labels:
+            severity: critical
+            category: admission
+          annotations:
+            summary: "No Kyverno metrics target is up"
+            description: "Kyverno controllers are not scraped for 10 minutes; admission control may be down (webhook failure policy decides whether pods are admitted)."
+    - name: securestream.pki
+      rules:
+        - alert: CertificateExpiringSoon
+          expr: >-
+            (certmanager_certificate_expiration_timestamp_seconds - time()) < 14 * 24 * 3600
+          for: 1h
+          labels:
+            severity: warning
+            category: pki
+          annotations:
+            summary: "Certificate {{ $labels.namespace }}/{{ $labels.name }} expires in {{ $value | humanizeDuration }}"
+            description: "cert-manager has not renewed it yet; check the Certificate and the ClusterIssuer."
+        - alert: CertificateNotReady
+          expr: >-
+            max by (namespace, name) (certmanager_certificate_ready_status{condition="False"}) == 1
+          for: 15m
+          labels:
+            severity: warning
+            category: pki
+          annotations:
+            summary: "Certificate {{ $labels.namespace }}/{{ $labels.name }} is not ready"
+            description: "cert-manager reports Ready=False for 15 minutes."
+    - name: securestream.application
+      rules:
+        - alert: CatalogApiHighErrorRate
+          expr: >-
+            sum(rate(traefik_service_requests_total{service=~"catalog-catalog-api.*", code=~"5.."}[5m]))
+              / clamp_min(sum(rate(traefik_service_requests_total{service=~"catalog-catalog-api.*"}[5m])), 1e-9)
+            > 0.05
+          for: 10m
+          labels:
+            severity: warning
+            category: application
+          annotations:
+            summary: "catalog-api 5xx ratio {{ $value | humanizePercentage }}"
+            description: "More than 5 % of requests through the ingress failed with 5xx for 10 minutes."

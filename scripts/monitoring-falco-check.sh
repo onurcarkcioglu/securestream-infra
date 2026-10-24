@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Item 9 kaniti: konteynerde etkilesimli kabuk -> Falco olayi -> Falcosidekick -> Loki.
+# Izleme kaniti: konteynerde etkilesimli kabuk -> Falco olayi -> Falcosidekick -> Loki.
 # Insan calistirir (terminalde, -it icin), admin kubeconfig ile:
 #   sudo KUBECONFIG=/etc/securestream/admin.kubeconfig ~/securestream/scripts/monitoring-falco-check.sh
 # 1) monitoring'de gecici bir busybox podunda -it kabuk acilir ve hemen kapanir (pod silinir).

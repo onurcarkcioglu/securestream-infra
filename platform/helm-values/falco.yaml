@@ -19,7 +19,7 @@ collectors:
         enabled: false
       podman:
         enabled: false
-# Falco olaylari Falcosidekick uzerinden Loki'ye (Item 9). Etiketler: rule, source, priority, tags.
+# Falco olaylari Falcosidekick uzerinden Loki'ye. Etiketler: rule, source, priority, tags.
 falcosidekick:
   enabled: true
   replicaCount: 1

@@ -1,4 +1,4 @@
-# Prometheus hedefleri: Kyverno politika sonuclari ve Traefik istek metrikleri (catalog-api istek/hata orani).
+# Prometheus hedefleri: Kyverno, Traefik (catalog-api istek/hata orani), Falcosidekick (Falco olaylari), cert-manager.
 # catalog-api'nin kendi /metrics'i NetworkPolicy nedeniyle kazinmaz (yalnizca ingress'ten trafik); Traefik
 # metrikleri istek sayisini ve durum kodunu servis bazinda verir.
 apiVersion: monitoring.coreos.com/v1
@@ -30,3 +30,38 @@ spec:
   podMetricsEndpoints:
     - port: metrics
       interval: 30s
+---
+# Falcosidekick: Falco olay sayaclari (falcosecurity_falcosidekick_falco_events_total, priority/rule etiketleriyle)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: falcosidekick
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames: [falco]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: falcosidekick
+      app.kubernetes.io/component: core
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+---
+# cert-manager: sertifika bitis zamani ve hazir durumu (certmanager_certificate_*)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cert-manager
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames: [cert-manager]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cert-manager
+      app.kubernetes.io/component: controller
+  endpoints:
+    - port: http-metrics
+      interval: 60s
