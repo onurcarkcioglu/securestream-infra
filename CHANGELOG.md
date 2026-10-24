@@ -15,6 +15,7 @@ date. The narrative version is [docs/project-history.md](docs/project-history.md
 - Pod Security Admission level for every platform namespace (`platform/manifests/namespaces.yaml`).
 
 ### Security
+- SLSA v1 build provenance for catalog-api images, required by Kyverno at admission (source and builder checked).
 - Kubescape High findings fixed in values: Falco least privilege, Kyverno without hostPath (lab CA from a
   ConfigMap), MetalLB without the frr-k8s BGP backend, requests and limits for every container.
 - node-exporter moved to its own namespace; `monitoring` enforces `baseline`.

@@ -44,9 +44,14 @@ gaps are listed openly with the planned fix. Evidence links point to the build l
 | Builds run on a hosted, dedicated build platform (not a developer laptop) | Yes — GitLab Runner on its own VM, ephemeral job containers |
 | Build output is signed | Yes — cosign signature on every `main` image |
 | SBOM attached and signed | Yes — CycloneDX attestation |
-| **Provenance** generated and signed | **Gap** — SLSA provenance attestation is on the roadmap; today the evidence is signature + SBOM + pipeline logs |
+| **Provenance** generated and signed | **Prepared** — SLSA v1 provenance (`catalog-api: ci/slsa-provenance.sh`, buildType `docs/slsa-build-type.md`): source repository + commit, `ci-templates` tag, base image and Kaniko digests, pipeline id; attached with `cosign attest --type slsaprovenance1` and verified in the same job. Unit tests for the generator (valid predicate, refuses unpinned images and values that would need JSON escaping) |
+| Provenance checked at admission | **Prepared** — Kyverno `verify-securestream-images` also requires the provenance attestation signed with the same key, a source in the `securestream` GitLab group and the lab runner as builder (`platform/manifests/kyverno-verify-images.yaml`) |
 
-Honest position: the signing and SBOM pieces are in place; formal SLSA Build L2 needs provenance attestation.
+Honest position: with provenance this is SLSA **Build L2** (hosted build, signed provenance). It is not L3: the
+provenance is generated and signed inside the job with a key from a protected CI variable, so a compromised job on
+`main` could forge it; L3 needs signing by an isolated build service. Status changes to Done after the first `main`
+pipeline with provenance and the policy apply (negative test: the currently running image, signed but without
+provenance, must be denied).
 
 ## 4. Kubernetes hardening (CIS-aligned)
 
