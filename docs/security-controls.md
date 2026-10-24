@@ -81,6 +81,19 @@ application (`catalog`) fails none of the High controls except through the deplo
 Fixes change the cluster (Helm upgrade with the admin kubeconfig) and are run by the human; after each, re-run
 `scripts/kubescape-scan.sh` and compare the score.
 
+### Pod Security Admission exceptions
+
+| Namespace / workload | PSA labels | Warning seen | Why it is accepted | Compensating controls | Review |
+|---|---|---|---|---|---|
+| `monitoring` / DaemonSet `kps-prometheus-node-exporter` (kube-prometheus-stack 92.2.0) | `enforce: privileged`, `warn: baseline` (`platform/manifests/monitoring/namespace.yaml`) | Install on 2026-10-24: baseline violations `hostNetwork`, `hostPID`, `hostPath` `/proc`, `/sys`, `/` | node-exporter reports node metrics (CPU, memory, disk, network, processes); it can only read them from the host's namespaces and filesystems. No baseline-compatible alternative exists | Upstream image `quay.io/prometheus/node-exporter:v1.12.1-distroless`; `runAsNonRoot` (UID/GID 65534), `readOnlyRootFilesystem`, all three hostPath mounts `readOnly` (`/` with `HostToContainer`); no added capabilities, not privileged; port 9100 only | 2027-01-21 (90 days) |
+
+Residual risk: `enforce: privileged` applies to the whole `monitoring` namespace, so Grafana, Prometheus, Loki and
+Alloy are not blocked by PSA either (`warn: baseline` still reports them; none of them uses host access today).
+Roadmap: move node-exporter into its own namespace (or a Kyverno exception scoped to that DaemonSet) and set
+`monitoring` to `enforce: baseline`. The next Kubescape run will report node-exporter under C-0038 (hostPID),
+C-0041 (hostNetwork) and C-0048 (hostPath); they get `kubescape` entries in `security/exceptions.yaml` with this
+reason once the findings exist.
+
 ## 5. Scanner exceptions
 
 Findings that cannot be fixed are recorded in `security/exceptions.yaml` of the scanned repository (`id, tool, rule,

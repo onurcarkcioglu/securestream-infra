@@ -254,3 +254,14 @@
   `http_output` -> sidekick, `json_output: true`. Canli DaemonSet render ile ortusuyor.
 - Kapasite: dort yeni chart + sidekick requests toplami ~780m CPU / ~1.9 GiB; kumede mevcut requests 1020m / ~2.1 GiB,
   allocatable 24 CPU / ~39 GiB, kullanim ~3.3 GiB.
+
+## Izleme kuruldu, Argo CD deploy token servisi duzeltildi (2026-10-24)
+- Izleme (insan kurdu): tum `monitoring` pod'lari Running, Falcosidekick Running; Grafana `/api/health` 200, kimliksiz
+  dashboard API 401 (asistan tekrar kontrol etti). Falco -> Loki kaniti gecti: 1 olay, 09:19:12Z, Notice.
+- node-exporter PSA baseline uyarisi (`hostNetwork`, `hostPID`, hostPath `/proc` `/sys` `/`): gerekceli istisna,
+  telafi kontrolleri ve 2027-01-21 gozden gecirme tarihiyle `security-controls.md`'de. Kalan risk: `monitoring`
+  namespace'i tumuyle `enforce: privileged`; yol haritasi node-exporter icin ayri namespace.
+- `install-argocd.sh`: `DeployTokens::CreateService` GitLab 19.5.1'de yok; salt okunur kontrolle
+  `Projects::DeployTokens::CreateService.new(project, user, params)` bulundu. Ilk calisma chart'i kurdu, token
+  adiminda durdu; GitLab'da `argocd*` token yok (ders #37). Ruby `ruby -c` temiz, shellcheck temiz.
+- Ders #38: kompozit komutta `kubectl get secret` tekrarlandi, deny kurali calistirmadan engelledi.
